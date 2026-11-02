@@ -7,8 +7,8 @@
         android:shortcutLongLabel="@string/shortcut_off_long"
         android:shortcutShortLabel="@string/shortcut_off_short">
         <intent
-            android:action="io.github.akane599.paneloff.OFF"
-            android:targetClass="io.github.akane599.paneloff.ShortcutActivity"
-            android:targetPackage="io.github.akane599.paneloff" />
+            android:action="io.github.akane599.umbra.OFF"
+            android:targetClass="io.github.akane599.umbra.ShortcutActivity"
+            android:targetPackage="io.github.akane599.umbra" />
     </shortcut>
 </shortcuts>

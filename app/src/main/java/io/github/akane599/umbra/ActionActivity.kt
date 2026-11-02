@@ -1,4 +1,4 @@
-package io.github.akane599.paneloff
+package io.github.akane599.umbra
 
 import android.app.Activity
 import android.os.Bundle
@@ -12,7 +12,7 @@ import android.util.Log
  *    "Commands from other apps" setting is off, only ON (recovery) is accepted.
  *
  * Being in the foreground, it isn't subject to background FGS start restrictions.
- * Actions: io.github.akane599.paneloff.OFF | ON | TOGGLE
+ * Actions: io.github.akane599.umbra.OFF | ON | TOGGLE
  */
 class ActionActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,6 +34,6 @@ class ActionActivity : Activity() {
     }
 
     companion object {
-        const val SHORTCUT_ALIAS = "io.github.akane599.paneloff.ShortcutActivity"
+        const val SHORTCUT_ALIAS = "io.github.akane599.umbra.ShortcutActivity"
     }
 }

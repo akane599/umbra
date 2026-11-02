@@ -1,11 +1,11 @@
-package io.github.akane599.paneloff
+package io.github.akane599.umbra
 
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.WorkerThread
-import io.github.akane599.paneloff.server.PanelServer
+import io.github.akane599.umbra.server.PanelServer
 import rikka.shizuku.Shizuku
 import java.io.BufferedWriter
 import java.io.IOException
@@ -70,7 +70,7 @@ class PrivilegedBridge(
         // With a shell in between, the shell is what dies; the server survives, notices the client's
         // death via the pid watchdog and restores the panel. The trailing "exit" keeps the shell from exec'ing its last command.
         val cmd = "CLASSPATH='$apk' /system/bin/app_process /system/bin " +
-            "--nice-name=paneloff_server ${PanelServer::class.java.name} ${android.os.Process.myPid()}; exit"
+            "--nice-name=umbra_server ${PanelServer::class.java.name} ${android.os.Process.myPid()}; exit"
         val p = when (b) {
             Backend.SHIZUKU -> {
                 if (!waitForShizukuBinder(2000)) throw IllegalStateException(ERR_SHIZUKU_NOT_RUNNING)

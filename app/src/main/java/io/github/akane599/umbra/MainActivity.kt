@@ -1,4 +1,4 @@
-package io.github.akane599.paneloff
+package io.github.akane599.umbra
 
 import android.Manifest
 import android.app.StatusBarManager
@@ -37,9 +37,9 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
-import io.github.akane599.paneloff.PrivilegedBridge.Companion.ShizukuState
-import io.github.akane599.paneloff.databinding.ActivityMainBinding
-import io.github.akane599.paneloff.ui.PowerOrbView
+import io.github.akane599.umbra.PrivilegedBridge.Companion.ShizukuState
+import io.github.akane599.umbra.databinding.ActivityMainBinding
+import io.github.akane599.umbra.ui.PowerOrbView
 import rikka.shizuku.Shizuku
 import java.util.concurrent.Executors
 
@@ -504,7 +504,7 @@ class MainActivity : AppCompatActivity() {
             }
             line.addView(
                 TextView(this).apply {
-                    text = action.replace("io.github.akane599.paneloff.", "…")
+                    text = action.replace("io.github.akane599.umbra.", "…")
                     setTextAppearance(R.style.PK_Text_Mono)
                     typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
                 },

@@ -55,10 +55,10 @@ arka plandan ön plan servisi başlatabilmek için gerekir.
 
 ## Tasker
 
-Eylemler: `io.github.akane599.paneloff.OFF`, `…ON`, `…TOGGLE`
+Eylemler: `io.github.akane599.umbra.OFF`, `…ON`, `…TOGGLE`
 
-- **Önerilen:** Eylem → *Send Intent* → Target: **Activity**, Package `io.github.akane599.paneloff`,
-  Class `io.github.akane599.paneloff.ActionActivity`, Action yukarıdakilerden biri. Görünmez etkinlik, her
+- **Önerilen:** Eylem → *Send Intent* → Target: **Activity**, Package `io.github.akane599.umbra`,
+  Class `io.github.akane599.umbra.ActionActivity`, Action yukarıdakilerden biri. Görünmez etkinlik, her
   koşulda çalışır.
 - Alternatif: Target **Broadcast Receiver**, aynı paket ve eylem.
 

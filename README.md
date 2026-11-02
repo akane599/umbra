@@ -65,10 +65,10 @@ service from the background.
 
 ## Tasker
 
-Actions: `io.github.akane599.paneloff.OFF`, `…ON`, `…TOGGLE`
+Actions: `io.github.akane599.umbra.OFF`, `…ON`, `…TOGGLE`
 
-- **Recommended:** Action → *Send Intent* → Target: **Activity**, Package `io.github.akane599.paneloff`,
-  Class `io.github.akane599.paneloff.ActionActivity`, Action one of the above. It's an invisible
+- **Recommended:** Action → *Send Intent* → Target: **Activity**, Package `io.github.akane599.umbra`,
+  Class `io.github.akane599.umbra.ActionActivity`, Action one of the above. It's an invisible
   activity and works in every state.
 - Alternative: Target **Broadcast Receiver**, same package and action.
 

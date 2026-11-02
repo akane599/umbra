@@ -1,4 +1,4 @@
-package io.github.akane599.paneloff.server;
+package io.github.akane599.umbra.server;
 
 import android.annotation.SuppressLint;
 import android.os.Build;

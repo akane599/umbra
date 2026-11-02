@@ -104,7 +104,7 @@
     <string name="pref_external">Dış uygulamalardan komut</string>
     <string name="pref_external_on">Tasker vb. paneli kapatabilir. Kapatırsan yalnızca “aç” komutu kabul edilir.</string>
     <string name="pref_external_off">Yalnızca “aç” (ON) kabul edilir; kısayol ve kutucuk etkilenmez</string>
-    <string name="automation_hint">Tasker → Intent Gönder → Hedef: Etkinlik\nPaket io.github.akane599.paneloff · Sınıf …ActionActivity\n(Yayın alıcısı da çalışır: …CommandReceiver)</string>
+    <string name="automation_hint">Tasker → Intent Gönder → Hedef: Etkinlik\nPaket io.github.akane599.umbra · Sınıf …ActionActivity\n(Yayın alıcısı da çalışır: …CommandReceiver)</string>
     <string name="copy_action">%s eylemini kopyala</string>
 
     <!-- Hero card: ways back -->

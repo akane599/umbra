@@ -11,11 +11,11 @@ val keystoreProps = Properties().apply {
 }
 
 android {
-    namespace = "io.github.akane599.paneloff"
+    namespace = "io.github.akane599.umbra"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "io.github.akane599.paneloff"
+        applicationId = "io.github.akane599.umbra"
         minSdk = 29
         targetSdk = 36
         versionCode = 2

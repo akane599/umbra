@@ -1,4 +1,4 @@
-package io.github.akane599.paneloff
+package io.github.akane599.umbra
 
 import androidx.annotation.StringRes
 

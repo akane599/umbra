@@ -1,4 +1,4 @@
-package io.github.akane599.paneloff
+package io.github.akane599.umbra
 
 import android.content.Context
 import androidx.core.content.edit

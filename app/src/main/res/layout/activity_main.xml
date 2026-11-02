@@ -131,7 +131,7 @@
                 android:paddingEnd="24dp"
                 android:paddingBottom="20dp">
 
-                <io.github.akane599.paneloff.ui.PowerOrbView
+                <io.github.akane599.umbra.ui.PowerOrbView
                     android:id="@+id/orb"
                     android:layout_width="220dp"
                     android:layout_height="220dp"

@@ -1,4 +1,4 @@
-package io.github.akane599.paneloff.ui
+package io.github.akane599.umbra.ui
 
 import android.animation.ValueAnimator
 import android.content.Context
@@ -17,7 +17,7 @@ import android.view.animation.LinearInterpolator
 import android.view.animation.PathInterpolator
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
-import io.github.akane599.paneloff.R
+import io.github.akane599.umbra.R
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin

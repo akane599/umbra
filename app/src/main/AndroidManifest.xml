@@ -38,9 +38,9 @@
             android:taskAffinity=""
             android:theme="@android:style/Theme.NoDisplay">
             <intent-filter>
-                <action android:name="io.github.akane599.paneloff.OFF" />
-                <action android:name="io.github.akane599.paneloff.ON" />
-                <action android:name="io.github.akane599.paneloff.TOGGLE" />
+                <action android:name="io.github.akane599.umbra.OFF" />
+                <action android:name="io.github.akane599.umbra.ON" />
+                <action android:name="io.github.akane599.umbra.TOGGLE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -79,9 +79,9 @@
             android:name=".CommandReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="io.github.akane599.paneloff.OFF" />
-                <action android:name="io.github.akane599.paneloff.ON" />
-                <action android:name="io.github.akane599.paneloff.TOGGLE" />
+                <action android:name="io.github.akane599.umbra.OFF" />
+                <action android:name="io.github.akane599.umbra.ON" />
+                <action android:name="io.github.akane599.umbra.TOGGLE" />
             </intent-filter>
         </receiver>
 

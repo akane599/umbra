@@ -1,4 +1,4 @@
-package io.github.akane599.paneloff
+package io.github.akane599.umbra
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -457,9 +457,9 @@ class PanelService : Service() {
 
     companion object {
         private const val TAG = "PanelService"
-        const val ACTION_OFF = "io.github.akane599.paneloff.OFF"
-        const val ACTION_ON = "io.github.akane599.paneloff.ON"
-        const val ACTION_TOGGLE = "io.github.akane599.paneloff.TOGGLE"
+        const val ACTION_OFF = "io.github.akane599.umbra.OFF"
+        const val ACTION_ON = "io.github.akane599.umbra.ON"
+        const val ACTION_TOGGLE = "io.github.akane599.umbra.TOGGLE"
         const val EXTRA_SOURCE = "source"
         private const val CHANNEL = "panel"
         private const val NOTIF_ID = 1
