@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Umbra</string>
+    <string name="tagline">The screen goes dark. The phone keeps running.</string>
+    <string name="tile_label">Screen off</string>
+    <string name="tile_sub_active">On · screen is dark</string>
+    <string name="tile_sub_inactive">Tap to go dark</string>
+
+    <string name="shortcut_off_short">Screen off</string>
+    <string name="shortcut_off_long">Turn the display panel off</string>
+
+    <!-- Notification -->
+    <string name="channel_name">Screen status</string>
+    <string name="channel_desc">Persistent notification shown while the screen is dark</string>
+    <string name="notif_title_active">Screen is dark</string>
+    <string name="notif_title_preparing">Turning the screen off…</string>
+    <string name="notif_text_preparing">Starting the privileged helper</string>
+    <string name="notif_action_on">Turn screen on</string>
+
+    <string name="exit_short_volume">Vol+ and Vol− together</string>
+    <string name="exit_short_power">Power button</string>
+    <string name="exit_short_double_tap">Double tap</string>
+    <string name="exit_short_shake">Shake</string>
+    <string name="exit_short_timer">After %d min</string>
+    <string name="exit_short_tile">QS tile</string>
+
+    <string name="working">Privileged helper is working…</string>
+    <string name="privileged_failed">Failed: %s</string>
+    <string name="grant_done">Permissions granted (%s)</string>
+    <string name="copied">Copied to clipboard</string>
+    <string name="diag_title">Diagnostics</string>
+    <string name="diag_copy">Copy</string>
+
+    <!-- Hero card -->
+    <string name="hero_title_ready">Turn screen off</string>
+    <string name="hero_sub_ready">Tap and the screen goes dark; the previous app keeps running.</string>
+    <string name="hero_title_blocked">Permission needed first</string>
+    <string name="hero_sub_blocked">The screen can\'t be turned off without Shizuku permission. Tap to ask for it.</string>
+    <string name="hero_title_busy">Getting ready…</string>
+    <string name="hero_sub_busy">Starting the privileged helper</string>
+    <string name="hero_title_active">Screen is dark</string>
+    <string name="hero_sub_active">Tap to turn the screen back on</string>
+    <string name="dur_sec">%d s</string>
+    <string name="dur_min">%d min</string>
+    <string name="dur_hour">%1$d h %2$d min</string>
+
+    <!-- Privilege card -->
+    <string name="priv_grant_btn">Grant</string>
+    <string name="status_shizuku_ready">Shizuku is ready</string>
+    <string name="status_shizuku_ready_sub">Running as %1$s · %2$s · tap for diagnostics</string>
+    <string name="status_shizuku_no_perm">Shizuku permission needed</string>
+    <string name="status_shizuku_no_perm_sub">Shizuku is running but hasn\'t authorized this app</string>
+    <string name="status_shizuku_old">Shizuku is too old</string>
+    <string name="status_shizuku_old_sub">v11 or newer is required</string>
+    <string name="status_shizuku_off">Shizuku isn\'t running</string>
+    <string name="status_shizuku_off_auto">Root (su) will be tried · tap for diagnostics</string>
+    <string name="status_shizuku_off_strict">Start Shizuku or change the privilege source</string>
+    <string name="status_root_mode">Root (su) will be used</string>
+    <string name="status_root_mode_sub">Your root manager may ask on first use · tap for diagnostics</string>
+
+    <!-- Sections -->
+    <string name="cat_exits">Turning the screen back on</string>
+    <string name="cat_behavior">Behavior</string>
+    <string name="cat_setup">Setup and diagnostics</string>
+    <string name="cat_advanced">Advanced</string>
+    <string name="expanded">expanded</string>
+    <string name="collapsed">collapsed</string>
+    <string name="advanced_summary">Privilege: %1$s · Method: %2$s · External: %3$s</string>
+    <string name="on_short">on</string>
+    <string name="off_short">off</string>
+
+    <string name="pref_exit_volume">Vol+ and Vol− together</string>
+    <string name="pref_exit_volume_sum">Press both volume keys at once</string>
+    <string name="pref_exit_power">Single power press turns it on</string>
+    <string name="pref_exit_power_on">The phone locks and is woken right away</string>
+    <string name="pref_exit_power_off">The phone locks normally; press again to unlock</string>
+    <string name="pref_exit_double_tap">Double tap</string>
+    <string name="pref_exit_double_tap_on">Pocket guard: touches don\'t reach the app underneath</string>
+    <string name="pref_exit_double_tap_off">Touches pass through to the app underneath</string>
+    <string name="pref_exit_shake">Shake</string>
+    <string name="pref_exit_shake_sum">3 firm shakes within 1.5 s</string>
+    <string name="pref_exit_timer">Auto turn-on</string>
+    <string name="pref_exit_timer_sum">The screen comes back on by itself after the chosen time</string>
+    <string name="timer_off">Off</string>
+    <string name="timer_min">%d min</string>
+    <string name="timer_hour">%d h</string>
+
+    <string name="pref_keep_awake">Keep the phone awake</string>
+    <string name="pref_keep_awake_on">No screen timeout; apps keep running at full speed</string>
+    <string name="pref_keep_awake_off">The phone sleeps on timeout and the session ends</string>
+    <string name="pref_hold">Keep the screen dark</string>
+    <string name="pref_hold_sum">If the system turns the panel back on, it\'s turned off again within 3 s</string>
+    <string name="pref_collapse">Close the notification shade first</string>
+    <string name="pref_collapse_sum">Quick settings are hidden when started from the tile</string>
+    <string name="pref_privilege">Privilege source</string>
+    <string name="pref_method">Power-off method</string>
+
+    <string name="pref_add_tile">Add Quick Settings tile</string>
+    <string name="pref_add_tile_sum">Adds the Umbra tile in one tap</string>
+    <string name="pref_grant">Grant required permissions</string>
+    <string name="pref_grant_sum">Notifications, overlay and battery exemption, in one tap via Shizuku/root</string>
+    <string name="pref_diag">Diagnostics</string>
+    <string name="pref_diag_sum">Shows which power-off paths and key devices work</string>
+
+    <string name="pref_external">Commands from other apps</string>
+    <string name="pref_external_on">Tasker and others can turn the screen off. Disable to accept only “on”.</string>
+    <string name="pref_external_off">Only “on” (ON) is accepted; shortcuts and the tile are unaffected</string>
+    <string name="automation_hint">Tasker → Send Intent → Target: Activity\nPackage io.github.akane599.paneloff · Class …ActionActivity\n(The broadcast receiver works too: …CommandReceiver)</string>
+    <string name="copy_action">Copy %s action</string>
+
+    <!-- Hero card: ways back -->
+    <string name="exits_lead">To turn it back on</string>
+    <string name="recovery_short">If nothing else works, press power twice: lock, then unlock. This always works.</string>
+    <string name="last_session">Last session %1$s · ended by %2$s · %3$s</string>
+    <string name="ago_now">just now</string>
+    <string name="ago_min">%d min ago</string>
+    <string name="ago_hour">%d h ago</string>
+    <string name="ago_day">%d d ago</string>
+    <string name="no_exits_warning">No quick way back is enabled. Once the screen is dark, only the QS tile or pressing power twice will bring it back.</string>
+
+    <!-- Last error -->
+    <string name="error_dismiss">Dismiss warning</string>
+    <string name="error_toast">Couldn\'t turn the screen off: %s</string>
+    <string name="err_shizuku_perm_title">No Shizuku permission</string>
+    <string name="err_shizuku_perm_body">The last attempt failed. Allow Umbra in Shizuku, then try again.</string>
+    <string name="err_shizuku_off_title">Shizuku isn\'t running</string>
+    <string name="err_shizuku_off_body">The privileged helper couldn\'t start last time. Open Shizuku and start the service.</string>
+    <string name="err_root_title">Root access denied</string>
+    <string name="err_root_body">The root manager refused the request or su wasn\'t found. Allow Umbra in your root manager.</string>
+    <string name="err_generic_title">Couldn\'t turn the screen off</string>
+    <string name="err_generic_body">No power-off path worked on this device. Diagnostics shows which one is missing.</string>
+    <string name="err_action_grant">Grant</string>
+    <string name="err_action_open_shizuku">Open Shizuku</string>
+    <string name="err_action_diag">Open diagnostics</string>
+    <string name="diag_last_error">Last error (%1$s):\n%2$s\n\n</string>
+
+    <!-- How the last session ended -->
+    <string name="reason_volume">volume keys</string>
+    <string name="reason_power">power button</string>
+    <string name="reason_double_tap">double tap</string>
+    <string name="reason_shake">shake</string>
+    <string name="reason_timer">timer</string>
+    <string name="reason_tile">QS tile</string>
+    <string name="reason_notification">notification</string>
+    <string name="reason_automation">automation</string>
+    <string name="reason_shortcut">shortcut</string>
+    <string name="reason_app">the app</string>
+    <string name="reason_screen_off">screen lock</string>
+    <string name="reason_server_died">helper exit</string>
+
+    <string name="version_fmt">Version %s</string>
+</resources>

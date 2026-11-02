@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="pk_bg">#090B0E</color>
+    <color name="pk_surface">#12161B</color>
+    <color name="pk_surface_high">#1A2027</color>
+    <color name="pk_outline">#242B33</color>
+    <color name="pk_text">#E8ECEF</color>
+    <color name="pk_text_dim">#8994A0</color>
+    <color name="pk_accent">#5EE0B8</color>
+    <color name="pk_accent_soft">#173A31</color>
+    <color name="pk_on_accent">#03211A</color>
+    <color name="pk_warn">#F2B84B</color>
+    <color name="pk_warn_soft">#2A220F</color>
+    <color name="pk_warn_line">#5C4818</color>
+    <color name="pk_warn_text">#F2B84B</color>
+    <color name="pk_danger">#FF7A6B</color>
+    <color name="pk_orb_core">#050607</color>
+</resources>

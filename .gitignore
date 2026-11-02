@@ -1,0 +1,15 @@
+.gradle/
+build/
+app/build/
+local.properties
+*.jks
+keystore.properties
+.idea/
+*.iml
+.kotlin/
+*.keystore
+captures/
+.externalNativeBuild/
+.cxx/
+.impeccable/
+.claude/

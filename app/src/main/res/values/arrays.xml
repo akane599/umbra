@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="privilege_entries">
+        <item>Automatic (Shizuku → root)</item>
+        <item>Shizuku only</item>
+        <item>Root (su) only</item>
+    </string-array>
+    <string-array name="privilege_values" translatable="false">
+        <item>auto</item>
+        <item>shizuku</item>
+        <item>root</item>
+    </string-array>
+
+    <string-array name="method_entries">
+        <item>Automatic</item>
+        <item>SurfaceControl (scrcpy method)</item>
+        <item>DisplayManager (Android 15+)</item>
+    </string-array>
+    <string-array name="method_values" translatable="false">
+        <item>auto</item>
+        <item>surface</item>
+        <item>dm</item>
+    </string-array>
+</resources>

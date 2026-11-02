@@ -1,0 +1,41 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- body -->
+    <path
+        android:fillColor="#FFE8ECEF"
+        android:pathData="M44,26h20a7,7 0,0 1,7 7v42a7,7 0,0 1,-7 7h-20a7,7 0,0 1,-7 -7v-42a7,7 0,0 1,7 -7z" />
+    <!-- dark panel -->
+    <path
+        android:fillColor="#FF07090B"
+        android:pathData="M44,30h20a4,4 0,0 1,4 4v40a4,4 0,0 1,-4 4h-20a4,4 0,0 1,-4 -4v-40a4,4 0,0 1,4 -4z" />
+    <group>
+        <clip-path android:pathData="M44,30h20a4,4 0,0 1,4 4v40a4,4 0,0 1,-4 4h-20a4,4 0,0 1,-4 -4v-40a4,4 0,0 1,4 -4z" />
+        <!-- glass sheen -->
+        <path
+            android:fillColor="#0DFFFFFF"
+            android:pathData="M40,58L68,38V30H40z" />
+        <!-- glow behind the power glyph -->
+        <path android:pathData="M38,54a16,16 0,1 0,32 0a16,16 0,1 0,-32 0z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:centerX="54"
+                    android:centerY="54"
+                    android:gradientRadius="16"
+                    android:type="radial">
+                    <item android:color="#665EE0B8" android:offset="0" />
+                    <item android:color="#005EE0B8" android:offset="1" />
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+    <!-- power glyph -->
+    <path
+        android:pathData="M49.18,48.25A7.5,7.5 0,1 0,58.82 48.25M54,44.5V54"
+        android:strokeWidth="2.6"
+        android:strokeColor="#FF5EE0B8"
+        android:strokeLineCap="round" />
+</vector>

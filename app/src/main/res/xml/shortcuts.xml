@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_off"
+        android:shortcutId="panel_off"
+        android:shortcutLongLabel="@string/shortcut_off_long"
+        android:shortcutShortLabel="@string/shortcut_off_short">
+        <intent
+            android:action="io.github.akane599.paneloff.OFF"
+            android:targetClass="io.github.akane599.paneloff.ShortcutActivity"
+            android:targetPackage="io.github.akane599.paneloff" />
+    </shortcut>
+</shortcuts>

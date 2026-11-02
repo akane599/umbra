@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Light theme. "Panel off" idea: dark ink + a single accent color (mint). -->
+    <color name="pk_bg">#F2F4F6</color>
+    <color name="pk_surface">#FFFFFF</color>
+    <color name="pk_surface_high">#EBEFF2</color>
+    <color name="pk_outline">#DCE1E6</color>
+    <color name="pk_text">#0E1114</color>
+    <color name="pk_text_dim">#5A6571</color>
+    <color name="pk_accent">#0C9A74</color>
+    <color name="pk_accent_soft">#D6F3EA</color>
+    <color name="pk_on_accent">#FFFFFF</color>
+    <color name="pk_warn">#B07300</color>
+    <color name="pk_warn_soft">#FBEFD6</color>
+    <color name="pk_warn_line">#EBCB8C</color>
+    <color name="pk_warn_text">#7A5000</color>
+    <color name="pk_danger">#C9433A</color>
+    <color name="pk_orb_core">#0E1114</color>
+
+</resources>

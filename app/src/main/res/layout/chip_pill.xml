@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "To turn back on" paths on the main card: informational, not buttons. -->
+<com.google.android.material.chip.Chip xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    style="@style/Widget.Material3.Chip.Assist"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:clickable="false"
+    android:focusable="false"
+    android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+    android:textColor="@color/pk_text"
+    app:chipBackgroundColor="@color/pk_surface"
+    app:chipIconSize="18dp"
+    app:chipIconTint="@color/pk_accent"
+    app:chipMinHeight="34dp"
+    app:chipStrokeWidth="0dp"
+    app:ensureMinTouchTargetSize="false"
+    app:iconStartPadding="6dp" />

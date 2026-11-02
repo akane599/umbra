@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="privilege_entries">
+        <item>Otomatik (Shizuku → root)</item>
+        <item>Yalnız Shizuku</item>
+        <item>Yalnız root (su)</item>
+    </string-array>
+    <string-array name="method_entries">
+        <item>Otomatik</item>
+        <item>SurfaceControl (scrcpy yöntemi)</item>
+        <item>DisplayManager (Android 15+)</item>
+    </string-array>
+</resources>

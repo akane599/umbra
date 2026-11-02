@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tagline">Ekran kararır, telefon çalışmaya devam eder.</string>
+    <string name="tile_label">Ekranı karart</string>
+    <string name="tile_sub_active">Etkin · panel kapalı</string>
+    <string name="tile_sub_inactive">Dokun → kapat</string>
+
+    <string name="shortcut_off_short">Paneli kapat</string>
+    <string name="shortcut_off_long">Ekran panelini kapat</string>
+
+    <!-- Notification -->
+    <string name="channel_name">Panel durumu</string>
+    <string name="channel_desc">Panel kapalıyken gösterilen kalıcı bildirim</string>
+    <string name="notif_title_active">Panel kapalı</string>
+    <string name="notif_title_preparing">Panel kapatılıyor…</string>
+    <string name="notif_text_preparing">Yetkili yardımcı başlatılıyor</string>
+    <string name="notif_action_on">Paneli aç</string>
+
+    <string name="exit_short_volume">Ses+ ve Ses− birlikte</string>
+    <string name="exit_short_power">Güç tuşu</string>
+    <string name="exit_short_double_tap">Çift dokunma</string>
+    <string name="exit_short_shake">Salla</string>
+    <string name="exit_short_timer">%d dk sonra</string>
+    <string name="exit_short_tile">QS kutucuğu</string>
+
+    <string name="working">Yetkili yardımcı çalışıyor…</string>
+    <string name="privileged_failed">Başarısız: %s</string>
+    <string name="grant_done">İzinler verildi (%s)</string>
+    <string name="copied">Panoya kopyalandı</string>
+    <string name="diag_title">Tanılama</string>
+    <string name="diag_copy">Kopyala</string>
+
+    <!-- Hero card -->
+    <string name="hero_title_ready">Paneli kapat</string>
+    <string name="hero_sub_ready">Dokunduğunda panel kararır; önceki uygulama çalışmaya devam eder.</string>
+    <string name="hero_title_blocked">Önce yetki gerekli</string>
+    <string name="hero_sub_blocked">Shizuku izni olmadan panel kapatılamaz. Dokun, izin iste.</string>
+    <string name="hero_title_busy">Hazırlanıyor…</string>
+    <string name="hero_sub_busy">Yetkili yardımcı başlatılıyor</string>
+    <string name="hero_title_active">Panel kapalı</string>
+    <string name="hero_sub_active">Paneli geri açmak için dokun</string>
+    <string name="dur_sec">%d sn</string>
+    <string name="dur_min">%d dk</string>
+    <string name="dur_hour">%1$d sa %2$d dk</string>
+
+    <!-- Privilege card -->
+    <string name="priv_grant_btn">İzin ver</string>
+    <string name="status_shizuku_ready">Shizuku hazır</string>
+    <string name="status_shizuku_ready_sub">%1$s yetkisiyle · %2$s · tanılama için dokun</string>
+    <string name="status_shizuku_no_perm">Shizuku izni gerekli</string>
+    <string name="status_shizuku_no_perm_sub">Shizuku çalışıyor ama bu uygulamaya izin verilmedi</string>
+    <string name="status_shizuku_old">Shizuku sürümü çok eski</string>
+    <string name="status_shizuku_old_sub">v11 veya üstü gerekli</string>
+    <string name="status_shizuku_off">Shizuku çalışmıyor</string>
+    <string name="status_shizuku_off_auto">Root (su) denenecek · tanılama için dokun</string>
+    <string name="status_shizuku_off_strict">Shizuku\'yu başlat ya da yetki kaynağını değiştir</string>
+    <string name="status_root_mode">Root (su) kullanılacak</string>
+    <string name="status_root_mode_sub">İlk kullanımda root yöneticisi izin isteyebilir · tanılama için dokun</string>
+
+    <!-- Sections -->
+    <string name="cat_exits">Paneli geri açma</string>
+    <string name="cat_behavior">Davranış</string>
+    <string name="cat_setup">Kurulum ve tanılama</string>
+    <string name="cat_advanced">Gelişmiş</string>
+    <string name="expanded">açık</string>
+    <string name="collapsed">kapalı</string>
+    <string name="advanced_summary">Yetki: %1$s · Yöntem: %2$s · Dış komut: %3$s</string>
+    <string name="on_short">açık</string>
+    <string name="off_short">kapalı</string>
+
+    <string name="pref_exit_volume">Ses+ ve Ses− birlikte</string>
+    <string name="pref_exit_volume_sum">İki ses tuşuna aynı anda bas</string>
+    <string name="pref_exit_power">Güç tuşu tek basışta açsın</string>
+    <string name="pref_exit_power_on">Sistem kilitlenip anında uyandırılır</string>
+    <string name="pref_exit_power_off">Cihaz normal kilitlenir; açmak için bir kez daha bas</string>
+    <string name="pref_exit_double_tap">Çift dokunma</string>
+    <string name="pref_exit_double_tap_on">Cep koruması: dokunmalar alttaki uygulamaya gitmez</string>
+    <string name="pref_exit_double_tap_off">Dokunmalar alttaki uygulamaya iletilir</string>
+    <string name="pref_exit_shake">Salla</string>
+    <string name="pref_exit_shake_sum">1,5 sn içinde 3 sert sallama</string>
+    <string name="pref_exit_timer">Otomatik geri açma</string>
+    <string name="pref_exit_timer_sum">Belirtilen süre dolunca panel kendiliğinden açılır</string>
+    <string name="timer_off">Kapalı</string>
+    <string name="timer_min">%d dk</string>
+    <string name="timer_hour">%d sa</string>
+
+    <string name="pref_keep_awake">Cihazı uyanık tut</string>
+    <string name="pref_keep_awake_on">Ekran zaman aşımı uygulanmaz; uygulamalar tam hızda çalışır</string>
+    <string name="pref_keep_awake_off">Zaman aşımında cihaz uyur ve oturum biter</string>
+    <string name="pref_hold">Paneli kapalı tut</string>
+    <string name="pref_hold_sum">Sistem paneli kendiliğinden açarsa 3 sn içinde yeniden kapatır</string>
+    <string name="pref_collapse">Önce bildirim panelini kapat</string>
+    <string name="pref_collapse_sum">Kutucuktan açıldığında hızlı ayarlar gizlenir</string>
+    <string name="pref_privilege">Yetki kaynağı</string>
+    <string name="pref_method">Kapatma yöntemi</string>
+
+    <string name="pref_add_tile">Hızlı ayarlara kutucuk ekle</string>
+    <string name="pref_add_tile_sum">Umbra kutucuğunu tek dokunuşla ekler</string>
+    <string name="pref_grant">Gerekli izinleri ver</string>
+    <string name="pref_grant_sum">Bildirim, çizim (overlay) ve pil muafiyeti — Shizuku/root ile tek dokunuşta</string>
+    <string name="pref_diag">Tanılama</string>
+    <string name="pref_diag_sum">Hangi kapatma yollarının ve tuş aygıtlarının çalıştığını gösterir</string>
+
+    <string name="pref_external">Dış uygulamalardan komut</string>
+    <string name="pref_external_on">Tasker vb. paneli kapatabilir. Kapatırsan yalnızca “aç” komutu kabul edilir.</string>
+    <string name="pref_external_off">Yalnızca “aç” (ON) kabul edilir; kısayol ve kutucuk etkilenmez</string>
+    <string name="automation_hint">Tasker → Intent Gönder → Hedef: Etkinlik\nPaket io.github.akane599.paneloff · Sınıf …ActionActivity\n(Yayın alıcısı da çalışır: …CommandReceiver)</string>
+    <string name="copy_action">%s eylemini kopyala</string>
+
+    <!-- Hero card: ways back -->
+    <string name="exits_lead">Geri açmak için</string>
+    <string name="recovery_short">Hiçbiri olmazsa güç tuşuna iki kez bas: kilitle, aç. Her zaman çalışır.</string>
+    <string name="last_session">Son oturum %1$s · %2$s ile açıldı · %3$s</string>
+    <string name="ago_now">az önce</string>
+    <string name="ago_min">%d dk önce</string>
+    <string name="ago_hour">%d sa önce</string>
+    <string name="ago_day">%d gün önce</string>
+    <string name="no_exits_warning">Hızlı geri açma yolu seçili değil. Panel kararınca yalnızca QS kutucuğu ya da güç tuşuna iki kez basmak işe yarar.</string>
+
+    <!-- Last error -->
+    <string name="error_dismiss">Uyarıyı kapat</string>
+    <string name="error_toast">Panel kapatılamadı: %s</string>
+    <string name="err_shizuku_perm_title">Shizuku izni yok</string>
+    <string name="err_shizuku_perm_body">Son denemede panel kapatılamadı. Umbra\'ya Shizuku\'da izin ver, sonra tekrar dene.</string>
+    <string name="err_shizuku_off_title">Shizuku çalışmıyor</string>
+    <string name="err_shizuku_off_body">Son denemede yetkili yardımcı başlatılamadı. Shizuku uygulamasını açıp hizmeti başlat.</string>
+    <string name="err_root_title">Root izni alınamadı</string>
+    <string name="err_root_body">Root yöneticisi isteği reddetti ya da su bulunamadı. Root yöneticisinde Umbra\'ya izin ver.</string>
+    <string name="err_generic_title">Panel kapatılamadı</string>
+    <string name="err_generic_body">Bu cihazda kapatma yolu çalışmadı. Tanılama hangi yolun eksik olduğunu gösterir.</string>
+    <string name="err_action_grant">İzin ver</string>
+    <string name="err_action_open_shizuku">Shizuku\'yu aç</string>
+    <string name="err_action_diag">Tanılamayı aç</string>
+    <string name="diag_last_error">Son hata (%1$s):\n%2$s\n\n</string>
+
+    <!-- How the last session ended -->
+    <string name="reason_volume">ses tuşları</string>
+    <string name="reason_power">güç tuşu</string>
+    <string name="reason_double_tap">çift dokunma</string>
+    <string name="reason_shake">sallama</string>
+    <string name="reason_timer">zamanlayıcı</string>
+    <string name="reason_tile">QS kutucuğu</string>
+    <string name="reason_notification">bildirim</string>
+    <string name="reason_automation">otomasyon</string>
+    <string name="reason_shortcut">kısayol</string>
+    <string name="reason_app">uygulama</string>
+    <string name="reason_screen_off">ekran kilidi</string>
+    <string name="reason_server_died">yardımcı süreç kapanması</string>
+
+    <string name="version_fmt">Sürüm %s</string>
+</resources>
