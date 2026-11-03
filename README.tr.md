@@ -51,6 +51,10 @@ uyanışta sistem paneli kendisi açar.
 
 - Her şeyin üzerindeki bir katman dokunuşları yutar; alttaki uygulama çalışmaya ve görünmeye devam eder.
   Kilit açık kaldıkça ekran zaman aşımı uygulanmaz.
+- Kilit başlarken açık bir klavye varsa kilit onu kapatır. Klavye her katmanın üzerinde çizildiği için
+  kullanılabilir kalırdı; üstelik klavye açıkken gezinme çubuğu, gezinme kapalı olsa bile "klavyeyi
+  gizle" ve klavye değiştirme düğmelerini geri getirir. Kilit yalnızca bu durumda tuş odağını alır;
+  yoksa odak alttaki uygulamada kalır.
 - **Ekranı loşlaştır:** içeriğin üzerine yok / hafif / loş / koyu bir perde.
 - **Kilidi göster:** alt kenarda soluk bir rozet (OLED yanmasına karşı arada bir birkaç piksel kayar).
   Kapalıysa rozet yalnızca ekrana dokununca görünür.

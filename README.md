@@ -60,6 +60,10 @@ failed.
 
 - An overlay over everything swallows touches; the app underneath keeps running and stays visible.
   The screen timeout is held off for as long as the lock is on.
+- If a keyboard is open when the lock starts, the lock closes it. The keyboard is drawn above every
+  overlay, so it would stay usable, and with it open the navigation bar brings back its "hide
+  keyboard" and keyboard-switcher buttons even while navigation is disabled. Only then does the lock
+  take key focus; otherwise the app underneath keeps it.
 - **Dim the screen**: off, soft, dim or dark scrim over the content.
 - **Show the lock**: a faint badge near the bottom edge (it drifts a few pixels now and then against
   OLED burn-in). When off, the badge appears only when you touch the screen.

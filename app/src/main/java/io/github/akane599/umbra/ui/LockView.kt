@@ -17,8 +17,10 @@ import android.os.SystemClock
 import android.text.TextPaint
 import android.util.TypedValue
 import android.view.HapticFeedbackConstants
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowInsets
 import android.view.accessibility.AccessibilityManager
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.animation.DecelerateInterpolator
@@ -306,6 +308,30 @@ class LockView(
     }
 
     private fun onBadge(x: Float, y: Float, r: Float) = hypot(x - badgeX, y - badgeY) <= r
+
+    /**
+     * Called once when a keyboard is up underneath. The keyboard window sits above application
+     * overlays, so it would stay usable, and with it open the navigation bar brings back its
+     * "hide keyboard" and keyboard-switcher buttons even when navigation is disabled.
+     */
+    var onKeyboardVisible: (() -> Unit)? = null
+
+    override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
+        if (Build.VERSION.SDK_INT >= 30 && insets.isVisible(WindowInsets.Type.ime()) &&
+            insets.getInsets(WindowInsets.Type.ime()).bottom > 0
+        ) {
+            onKeyboardVisible?.also { onKeyboardVisible = null }?.invoke()
+        }
+        return super.onApplyWindowInsets(insets)
+    }
+
+    /** Only reached once the window has taken focus to close a keyboard: keep keys away from the app. */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_BACK) return true
+        // Volume, media and other system keys: the window's fallback handler does the usual thing.
+        if (event.isSystem) return super.dispatchKeyEvent(event)
+        return true
+    }
 
     override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
         super.onInitializeAccessibilityNodeInfo(info)

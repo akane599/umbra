@@ -18,8 +18,8 @@ android {
         applicationId = "io.github.akane599.umbra"
         minSdk = 29
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.2.1"
     }
 
     signingConfigs {

@@ -31,7 +31,9 @@ class LockOverlay(private val context: Context, private val onUnlock: () -> Unit
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            // ALT_FOCUSABLE_IM: without it the system never reports keyboard insets to a non-focusable window.
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
@@ -39,6 +41,8 @@ class LockOverlay(private val context: Context, private val onUnlock: () -> Unit
             PixelFormat.TRANSLUCENT,
         ).apply {
             title = "Umbra touch lock"
+            softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or
+                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
             layoutInDisplayCutoutMode = if (Build.VERSION.SDK_INT >= 30) {
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
             } else {
@@ -50,6 +54,7 @@ class LockOverlay(private val context: Context, private val onUnlock: () -> Unit
                 fitInsetsSides = 0
             }
         }
+        v.onKeyboardVisible = { takeFocus(v, lp) }
         return try {
             wm.addView(v, lp)
             view = v
@@ -58,6 +63,27 @@ class LockOverlay(private val context: Context, private val onUnlock: () -> Unit
         } catch (t: Throwable) {
             Log.w(TAG, "failed to add overlay", t)
             false
+        }
+    }
+
+    /**
+     * A keyboard is open under the lock. Take window focus, which closes it, and stay focused for
+     * the rest of the session so it can't come back. Only focus moves: the app underneath keeps
+     * running and is not paused.
+     */
+    private fun takeFocus(v: LockView, lp: WindowManager.LayoutParams) {
+        if (view !== v) return
+        // Both flags off: the window takes key focus and counts as a keyboard user, so the
+        // "always hidden" soft input mode below closes the keyboard.
+        lp.flags = lp.flags and (WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM).inv()
+        lp.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or
+            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
+        try {
+            wm.updateViewLayout(v, lp)
+            Log.i(TAG, "took focus to close the keyboard")
+        } catch (t: Throwable) {
+            Log.w(TAG, "failed to take focus", t)
         }
     }
 
