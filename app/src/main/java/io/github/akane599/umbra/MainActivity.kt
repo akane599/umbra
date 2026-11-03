@@ -5,12 +5,15 @@ import android.app.StatusBarManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.net.Uri
 import android.text.format.DateUtils
 import android.util.TypedValue
 import android.view.Gravity
@@ -84,8 +87,10 @@ class MainActivity : AppCompatActivity() {
         b.advancedHeader.setOnClickListener { setAdvancedOpen(!advancedOpen, animate = true) }
         b.version.text = getString(R.string.version_fmt, BuildConfig.VERSION_NAME)
 
+        buildScreenOn()
         buildExits()
         buildBehavior()
+        buildLock()
         buildSetup()
         buildAdvanced()
         setAdvancedOpen(savedInstanceState?.getBoolean(STATE_ADVANCED) == true, animate = false)
@@ -133,11 +138,12 @@ class MainActivity : AppCompatActivity() {
         val mode = settings.privilegeMode
         val blocked = mode == "shizuku" && shizuku != ShizukuState.READY
 
-        // --- main card
+        // --- main card: about the panel only; touch lock and stay awake have their own rows
+        val ps = panelState()
         val (orbMode, title, sub) = when {
-            PanelService.state == PanelService.State.ACTIVE ->
+            ps == PanelService.State.ACTIVE ->
                 Triple(PowerOrbView.Mode.ACTIVE, R.string.hero_title_active, R.string.hero_sub_active)
-            PanelService.state != PanelService.State.IDLE ->
+            ps != PanelService.State.IDLE ->
                 Triple(PowerOrbView.Mode.BUSY, R.string.hero_title_busy, R.string.hero_sub_busy)
             blocked ->
                 Triple(PowerOrbView.Mode.BLOCKED, R.string.hero_title_blocked, R.string.hero_sub_blocked)
@@ -167,6 +173,10 @@ class MainActivity : AppCompatActivity() {
             settings.clearError()
             err = null
         }
+        if (err == ActivationError.OVERLAY && Settings.canDrawOverlays(this)) {
+            settings.clearError()
+            err = null
+        }
         b.errorCard.isVisible = err != null && PanelService.state == PanelService.State.IDLE
         if (err != null) {
             b.errorTitle.setText(err.title)
@@ -174,7 +184,7 @@ class MainActivity : AppCompatActivity() {
             // The action follows Shizuku's current state, not the recorded error: "Grant" is
             // pointless if there's no Shizuku to grant, and so is "Open Shizuku" if it isn't installed.
             val action = when {
-                err.action == R.string.err_action_diag -> err.action
+                err.action == R.string.err_action_diag || err.action == R.string.err_action_overlay -> err.action
                 shizuku == ShizukuState.NO_PERMISSION -> R.string.err_action_grant
                 shizuku == ShizukuState.NOT_RUNNING &&
                     packageManager.getLaunchIntentForPackage(SHIZUKU_PKG) != null -> R.string.err_action_open_shizuku
@@ -274,6 +284,7 @@ class MainActivity : AppCompatActivity() {
         when (b.errorAction.tag as? Int) {
             R.string.err_action_grant -> requestShizuku()
             R.string.err_action_open_shizuku -> openShizuku()
+            R.string.err_action_overlay -> openOverlaySettings()
             else -> runDiagnostics()
         }
     }
@@ -292,6 +303,7 @@ class MainActivity : AppCompatActivity() {
         "app" -> getString(R.string.reason_app)
         "screen_off" -> getString(R.string.reason_screen_off)
         "server_died" -> getString(R.string.reason_server_died)
+        "switch" -> getString(R.string.reason_switch)
         null -> "?"
         else -> key // older versions stored a ready-made label
     }
@@ -318,17 +330,49 @@ class MainActivity : AppCompatActivity() {
 
     // ================================================================ actions
 
+    /** The session state as far as the screen-off orb is concerned. */
+    private fun panelState() =
+        if (PanelService.mode == PanelService.Mode.PANEL) PanelService.state else PanelService.State.IDLE
+
     private fun onOrbClick() {
+        val ps = panelState()
         when {
-            PanelService.state == PanelService.State.ACTIVE ->
+            ps == PanelService.State.ACTIVE ->
                 PanelService.command(applicationContext, PanelService.ACTION_ON, "app")
-            PanelService.state != PanelService.State.IDLE -> Unit
+            ps != PanelService.State.IDLE -> Unit
             b.orb.mode == PowerOrbView.Mode.BLOCKED -> onPrivilegeClick()
             else -> {
                 moveTaskToBack(true)
                 PanelService.command(applicationContext, PanelService.ACTION_OFF, "app")
             }
         }
+    }
+
+    /** Hands the screen back to the previous app, then locks it. */
+    private fun onLockClick() {
+        when {
+            PanelService.isActive(PanelService.Mode.LOCK) -> Unit
+            // Without overlay access and no helper to grant it, the system settings page is the only way.
+            !Settings.canDrawOverlays(this) && !helperLikely() -> openOverlaySettings()
+            else -> {
+                moveTaskToBack(true)
+                PanelService.command(applicationContext, PanelService.ACTION_LOCK, "app")
+            }
+        }
+    }
+
+    private fun onAwakeClick() {
+        val action = if (PanelService.isActive(PanelService.Mode.AWAKE)) PanelService.ACTION_STOP else PanelService.ACTION_AWAKE
+        PanelService.command(applicationContext, action, "app")
+    }
+
+    private fun helperLikely() =
+        settings.privilegeMode == "root" || PrivilegedBridge.shizukuState() == ShizukuState.READY
+
+    private fun openOverlaySettings() {
+        runCatching {
+            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+        }.onFailure { toast(getString(R.string.err_overlay_body)) }
     }
 
     private fun onPrivilegeClick() {
@@ -403,16 +447,93 @@ class MainActivity : AppCompatActivity() {
     }
 
     @RequiresApi(33)
-    private fun requestAddTile() {
-        getSystemService(StatusBarManager::class.java).requestAddTileService(
-            ComponentName(this, PanelTileService::class.java),
-            getString(R.string.tile_label),
-            Icon.createWithResource(this, R.drawable.ic_tile),
-            mainExecutor,
-        ) { }
+    private fun chooseTile() {
+        val tiles = listOf(
+            Triple(PanelTileService::class.java, R.string.tile_label, R.drawable.ic_tile),
+            Triple(LockTileService::class.java, R.string.lock_tile_label, R.drawable.ic_lock),
+            Triple(AwakeTileService::class.java, R.string.awake_tile_label, R.drawable.ic_awake),
+        )
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.add_tile_title)
+            .setItems(tiles.map { getString(it.second) }.toTypedArray()) { _, which ->
+                val (cls, label, icon) = tiles[which]
+                getSystemService(StatusBarManager::class.java).requestAddTileService(
+                    ComponentName(this, cls), getString(label), Icon.createWithResource(this, icon), mainExecutor,
+                ) { }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     // ================================================================ sections
+
+    /** The two display-on modes: touch lock (leaves the app, then locks) and stay awake (a live switch). */
+    private fun buildScreenOn() {
+        val box = b.screenOnBox
+        val lockRow = newRow(box, R.drawable.ic_lock, R.string.mode_lock_title)
+        lockRow.summary.isVisible = true
+        val lockBtn = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonTonalStyle).apply {
+            setText(R.string.mode_lock_btn)
+            setOnClickListener { onLockClick() }
+        }
+        (lockRow.root as LinearLayout).addView(lockBtn)
+        lockRow.root.setOnClickListener { onLockClick() }
+
+        val awakeRow = newRow(box, R.drawable.ic_awake, R.string.mode_awake_title)
+        awakeRow.summary.isVisible = true
+        awakeRow.toggle.isVisible = true
+        awakeRow.root.setOnClickListener { onAwakeClick() }
+        ViewCompat.setAccessibilityDelegate(awakeRow.root, object : androidx.core.view.AccessibilityDelegateCompat() {
+            override fun onInitializeAccessibilityNodeInfo(host: View, info: androidx.core.view.accessibility.AccessibilityNodeInfoCompat) {
+                super.onInitializeAccessibilityNodeInfo(host, info)
+                info.isCheckable = true
+                info.isChecked = PanelService.isActive(PanelService.Mode.AWAKE)
+                info.className = android.widget.Switch::class.java.name
+            }
+        })
+
+        val warn = ContextCompat.getColor(this, R.color.pk_warn_text)
+        val dim = ContextCompat.getColor(this, R.color.pk_text_dim)
+        val accent = ContextCompat.getColor(this, R.color.pk_accent)
+        dynamicRows += {
+            val overlayOk = Settings.canDrawOverlays(this) || helperLikely()
+            lockRow.summary.setText(if (overlayOk) R.string.mode_lock_sum else R.string.mode_lock_sum_needs_overlay)
+            lockRow.summary.setTextColor(if (overlayOk) dim else warn)
+
+            val awake = PanelService.isActive(PanelService.Mode.AWAKE)
+            awakeRow.toggle.isChecked = awake
+            awakeRow.summary.setText(if (awake) R.string.mode_awake_sum_on else R.string.mode_awake_sum_off)
+            awakeRow.summary.setTextColor(if (awake) accent else dim)
+            setRowActive(awakeRow, awake)
+            ViewCompat.setStateDescription(awakeRow.root, awakeRow.summary.text)
+        }
+    }
+
+    private fun buildLock() {
+        val box = b.lockBox
+        chipsRow(
+            box, R.drawable.ic_lock_dim, R.string.pref_lock_dim, R.string.pref_lock_dim_sum,
+            AppSettings.K_LOCK_DIM, settings.lockDim.toString(),
+            listOf("0" to R.string.dim_off, "45" to R.string.dim_light, "70" to R.string.dim_medium, "88" to R.string.dim_deep),
+        )
+        switchRow(
+            box, R.drawable.ic_lock, R.string.pref_lock_badge, AppSettings.K_LOCK_BADGE, true,
+            on = R.string.pref_lock_badge_on, off = R.string.pref_lock_badge_off,
+        )
+        switchRow(
+            box, R.drawable.ic_gesture_block, R.string.pref_lock_full, AppSettings.K_LOCK_FULL, false,
+            on = R.string.pref_lock_full_on, off = R.string.pref_lock_full_off,
+        )
+    }
+
+    /** Active mode rows fill their icon chip with the accent, the same signal the orb uses. */
+    private fun setRowActive(row: Row, active: Boolean) {
+        val chip = row.icon.parent as View
+        chip.backgroundTintList = if (active) ColorStateList.valueOf(ContextCompat.getColor(this, R.color.pk_accent)) else null
+        row.icon.imageTintList = ColorStateList.valueOf(
+            ContextCompat.getColor(this, if (active) R.color.pk_on_accent else R.color.pk_accent),
+        )
+    }
 
     private fun buildExits() {
         val box = b.exitsBox
@@ -463,7 +584,7 @@ class MainActivity : AppCompatActivity() {
     private fun buildSetup() {
         val box = b.setupBox
         if (Build.VERSION.SDK_INT >= 33) {
-            actionRow(box, R.drawable.ic_add_tile, R.string.pref_add_tile, R.string.pref_add_tile_sum) { requestAddTile() }
+            actionRow(box, R.drawable.ic_add_tile, R.string.pref_add_tile, R.string.pref_add_tile_sum) { chooseTile() }
         }
         actionRow(box, R.drawable.ic_verified, R.string.pref_grant, R.string.pref_grant_sum) {
             runPrivileged("grant $packageName") { r ->
@@ -497,7 +618,10 @@ class MainActivity : AppCompatActivity() {
             background = ContextCompat.getDrawable(context, R.drawable.bg_code)
             setPadding(dp(16), dp(8), dp(4), dp(8))
         }
-        for (action in listOf(PanelService.ACTION_OFF, PanelService.ACTION_ON, PanelService.ACTION_TOGGLE)) {
+        for (action in listOf(
+            PanelService.ACTION_OFF, PanelService.ACTION_ON, PanelService.ACTION_TOGGLE,
+            PanelService.ACTION_LOCK, PanelService.ACTION_AWAKE, PanelService.ACTION_STOP,
+        )) {
             val line = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -643,9 +767,42 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun timerRow(box: LinearLayout) {
-        val row = newRow(box, R.drawable.ic_timer, R.string.pref_exit_timer)
+        val choices = TIMER_CHOICES.map { m ->
+            m.toString() to when {
+                m == 0 -> getString(R.string.timer_off)
+                m >= 60 -> getString(R.string.timer_hour, m / 60)
+                else -> getString(R.string.timer_min, m)
+            }
+        }
+        chipsRowText(
+            box, R.drawable.ic_timer, R.string.pref_exit_timer, R.string.pref_exit_timer_sum,
+            AppSettings.K_TIMER, settings.timerMinutes.toString(), choices,
+        )
+    }
+
+    private fun chipsRow(
+        box: LinearLayout,
+        @DrawableRes icon: Int,
+        @StringRes title: Int,
+        @StringRes summary: Int,
+        key: String,
+        current: String,
+        choices: List<Pair<String, Int>>,
+    ) = chipsRowText(box, icon, title, summary, key, current, choices.map { it.first to getString(it.second) })
+
+    /** A row with a single-choice chip group under it, stored as a string preference. */
+    private fun chipsRowText(
+        box: LinearLayout,
+        @DrawableRes icon: Int,
+        @StringRes title: Int,
+        @StringRes summary: Int,
+        key: String,
+        current: String,
+        choices: List<Pair<String, String>>,
+    ) {
+        val row = newRow(box, icon, title)
         row.summary.isVisible = true
-        row.summary.setText(R.string.pref_exit_timer_sum)
+        row.summary.setText(summary)
         row.root.background = null
         row.root.isClickable = false
 
@@ -657,19 +814,14 @@ class MainActivity : AppCompatActivity() {
             chipSpacingVertical = dp(0)
             setPadding(dp(72), 0, dp(16), dp(12))
         }
-        val current = settings.timerMinutes
-        for (m in TIMER_CHOICES) {
+        for ((value, label) in choices) {
             val chip = (layoutInflater.inflate(R.layout.chip_choice, group, false) as Chip).apply {
                 id = View.generateViewId()
-                text = when {
-                    m == 0 -> getString(R.string.timer_off)
-                    m >= 60 -> getString(R.string.timer_hour, m / 60)
-                    else -> getString(R.string.timer_min, m)
-                }
-                isChecked = m == current
+                text = label
+                isChecked = value == current
                 setOnCheckedChangeListener { _, checked ->
                     if (checked) {
-                        settings.putString(AppSettings.K_TIMER, m.toString())
+                        settings.putString(key, value)
                         refresh()
                     }
                 }

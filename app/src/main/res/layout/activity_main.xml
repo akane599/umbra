@@ -283,6 +283,23 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Display stays on: touch lock and stay awake -->
+        <TextView
+            style="@style/PK.SectionLabel"
+            android:text="@string/cat_screen_on" />
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/PK.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:id="@+id/screenOnBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Turning back on -->
         <TextView
             style="@style/PK.SectionLabel"
@@ -312,6 +329,23 @@
 
             <LinearLayout
                 android:id="@+id/behaviorBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Touch lock options -->
+        <TextView
+            style="@style/PK.SectionLabel"
+            android:text="@string/cat_lock" />
+
+        <com.google.android.material.card.MaterialCardView
+            style="@style/PK.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:id="@+id/lockBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />

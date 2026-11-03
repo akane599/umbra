@@ -11,4 +11,26 @@
             android:targetClass="io.github.akane599.umbra.ShortcutActivity"
             android:targetPackage="io.github.akane599.umbra" />
     </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_lock"
+        android:shortcutId="touch_lock"
+        android:shortcutLongLabel="@string/shortcut_lock_long"
+        android:shortcutShortLabel="@string/shortcut_lock_short">
+        <intent
+            android:action="io.github.akane599.umbra.LOCK"
+            android:targetClass="io.github.akane599.umbra.ShortcutActivity"
+            android:targetPackage="io.github.akane599.umbra" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_awake"
+        android:shortcutId="stay_awake"
+        android:shortcutLongLabel="@string/shortcut_awake_long"
+        android:shortcutShortLabel="@string/shortcut_awake_short">
+        <intent
+            android:action="io.github.akane599.umbra.AWAKE"
+            android:targetClass="io.github.akane599.umbra.ShortcutActivity"
+            android:targetPackage="io.github.akane599.umbra" />
+    </shortcut>
 </shortcuts>

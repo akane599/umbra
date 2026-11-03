@@ -1,6 +1,7 @@
 package io.github.akane599.umbra.server;
 
 import android.annotation.SuppressLint;
+import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.SystemClock;
@@ -32,7 +33,7 @@ import java.util.concurrent.TimeUnit;
  * <pre>
  * args     : [client-pid]  (if given, the panel is restored and the server exits when the client dies)
  * commands : ping | off [auto|surface|dm] | on | release | hold SEC | keys | collapse | wake
- *            | grant PACKAGE | diag | exit
+ *            | system off|on | grant PACKAGE | diag | exit
  * replies  : "ok COMMAND detail" | "err COMMAND message"
  * events   : "evt combo" (vol+ and vol- together) | "evt power" (power key)
  * </pre>
@@ -83,6 +84,27 @@ public final class PanelServer {
     private static boolean keysStarted;
     private static int keyDeviceCount;
     private static boolean volUp, volDown, comboFired;
+
+    // StatusBarManager.DISABLE_* / DISABLE2_*: what "system off" turns off while touch lock is on.
+    private static final int DISABLE_EXPAND = 0x00010000;
+    private static final int DISABLE_NOTIFICATION_ALERTS = 0x00040000;
+    private static final int DISABLE_HOME = 0x00200000;
+    private static final int DISABLE_BACK = 0x00400000;
+    private static final int DISABLE_RECENT = 0x01000000;
+    private static final int DISABLE_SEARCH = 0x02000000;
+    private static final int DISABLE2_QUICK_SETTINGS = 1;
+    private static final int DISABLE2_NOTIFICATION_SHADE = 1 << 2;
+    private static final int LOCK_DISABLE = DISABLE_EXPAND | DISABLE_NOTIFICATION_ALERTS | DISABLE_HOME
+            | DISABLE_BACK | DISABLE_RECENT | DISABLE_SEARCH;
+    private static final int LOCK_DISABLE2 = DISABLE2_QUICK_SETTINGS | DISABLE2_NOTIFICATION_SHADE;
+
+    /**
+     * Identifies our disable request to StatusBarManagerService, which links to its death: if this
+     * process dies for any reason, the system drops the flags by itself.
+     */
+    private static final IBinder SYSTEM_TOKEN = new Binder();
+    private static Object statusBar;
+    private static volatile boolean systemOff;
 
     private PanelServer() {
     }
@@ -143,6 +165,11 @@ public final class PanelServer {
                         break;
                     case "wake":
                         emit("ok wake " + run("/system/bin/input", "keyevent", "224"));
+                        break;
+                    case "system":
+                        if ("off".equals(arg)) emit("ok system " + systemUi(false));
+                        else if ("on".equals(arg)) emit("ok system " + systemUi(true));
+                        else emit("err system expected off|on");
                         break;
                     case "grant":
                         emit("ok grant " + grant(arg));
@@ -343,7 +370,15 @@ public final class PanelServer {
     }
 
     private static void restoreIfNeeded() {
-        // app died / exiting: turn the panel back on if we turned it off
+        // app died / exiting: give the system UI back (the system would also do it once we die)
+        if (systemOff) {
+            try {
+                systemUi(true);
+            } catch (Throwable t) {
+                emit("log restore-system " + describe(t));
+            }
+        }
+        // then turn the panel back on if we turned it off
         if (!panelOff) return;
         try {
             turnOn();
@@ -657,6 +692,46 @@ public final class PanelServer {
         }
     }
 
+    // ------------------------------------------------------------------ system UI (touch lock)
+
+    /**
+     * Turns off the notification shade, quick settings, heads-up alerts and the home / back /
+     * recents navigation (buttons and gestures), the same flags kiosk and setup screens use. Touch
+     * keeps working, so the lock's own hold-to-unlock still does; the power key is never affected.
+     * Needs STATUS_BAR, which shell (Shizuku) and root both hold.
+     */
+    private static synchronized String systemUi(boolean enable) throws Exception {
+        Object sb = statusBar();
+        int what = enable ? 0 : LOCK_DISABLE;
+        int what2 = enable ? 0 : LOCK_DISABLE2;
+        sb.getClass().getMethod("disable", int.class, IBinder.class, String.class)
+                .invoke(sb, what, SYSTEM_TOKEN, CALLER_TAG);
+        // Flags may already be set even if disable2 fails below: make sure exit paths restore them.
+        if (!enable) systemOff = true;
+        String extra = "";
+        try {
+            sb.getClass().getMethod("disable2", int.class, IBinder.class, String.class)
+                    .invoke(sb, what2, SYSTEM_TOKEN, CALLER_TAG);
+        } catch (NoSuchMethodException e) {
+            extra = " (no disable2)";
+        }
+        systemOff = !enable;
+        return (enable ? "restored" : "blocked") + extra;
+    }
+
+    private static synchronized Object statusBar() throws Exception {
+        if (statusBar == null) {
+            Class<?> sm = Class.forName("android.os.ServiceManager");
+            IBinder b = (IBinder) sm.getMethod("getService", String.class).invoke(null, "statusbar");
+            if (b == null) throw new IllegalStateException("statusbar service not found");
+            statusBar = Class.forName("com.android.internal.statusbar.IStatusBarService$Stub")
+                    .getMethod("asInterface", IBinder.class).invoke(null, b);
+        }
+        return statusBar;
+    }
+
+    private static final String CALLER_TAG = "io.github.akane599.umbra";
+
     // ------------------------------------------------------------------ helper commands
 
     private static String grant(String pkg) throws Exception {
@@ -733,7 +808,15 @@ public final class PanelServer {
             String name = new File(devs.get(i)).getName();
             sb.append(name).append(new File(devs.get(i)).canRead() ? "" : "(no-read)");
         }
+        try {
+            Object bar = statusBar();
+            bar.getClass().getMethod("disable", int.class, IBinder.class, String.class);
+            sb.append(" statusbar_api=ok");
+        } catch (Throwable t) {
+            sb.append(" statusbar_api=").append(describe(t));
+        }
         sb.append(" panel_off=").append(panelOff);
+        sb.append(" system_off=").append(systemOff);
         return sb.toString();
     }
 }

@@ -9,6 +9,12 @@ downloads carry on. It isn't brightness −1 or a black overlay. It is the same 
 
 Requires **Shizuku** (adb/shell or root) or **root** (KernelSU, Magisk, …). Android 10+.
 
+Two display-on modes live next to it. Neither needs Shizuku or root for the basics:
+
+- **Touch lock**: the display stays on and never times out, but touches do nothing. Optionally dims
+  what's underneath and shows a small lock badge. Hold the lock to undo.
+- **Stay awake**: no screen timeout, for as long as you want, until you stop it or press power.
+
 ## How it works
 
 - The app starts the `PanelServer` class from its own APK inside `app_process`, through **Shizuku**
@@ -50,6 +56,29 @@ The main screen lists the ways back that are actually enabled *before* you tap, 
 quick ones are on, and keeps a card with a plain explanation and the right fix if the last attempt
 failed.
 
+## Touch lock
+
+- An overlay over everything swallows touches; the app underneath keeps running and stays visible.
+  The screen timeout is held off for as long as the lock is on.
+- **Dim the screen**: off, soft, dim or dark scrim over the content.
+- **Show the lock**: a faint badge near the bottom edge (it drifts a few pixels now and then against
+  OLED burn-in). When off, the badge appears only when you touch the screen.
+- **Unlock**: hold the lock for about a second (a ring fills, the shackle opens). With Shizuku/root,
+  Vol+ and Vol− together also unlock. The power button always ends the lock. With TalkBack, a
+  double-tap-and-hold anywhere works, and there's an "Unlock" accessibility action.
+- **Block system gestures too** (Shizuku or root): an overlay can't stop swipe-home, back or the
+  notification shade, because the system draws those above every app. With this on, the helper also
+  sets the status bar disable flags that kiosk and setup screens use: no notification shade, quick
+  settings or heads-up pop-ups, and no home, back or recents. Touch itself keeps working, so the hold
+  still unlocks. These flags are tied to the helper process: if it dies for any reason, Android drops
+  them by itself, so a crash can't leave the phone stuck.
+- Start it from the app, the **Touch lock** QS tile or the launcher shortcut.
+
+## Stay awake
+
+Holds a screen wake lock until you switch it off (app, **Stay awake** QS tile, notification) or press
+power. Nothing else changes: touch, brightness and apps behave as usual.
+
 ## Behavior
 
 - **Keep the phone awake** (default on): no screen timeout during a session.
@@ -65,7 +94,8 @@ service from the background.
 
 ## Tasker
 
-Actions: `io.github.akane599.umbra.OFF`, `…ON`, `…TOGGLE`
+Actions: `io.github.akane599.umbra.OFF`, `…ON`, `…TOGGLE`, `…LOCK` (touch lock), `…AWAKE` (stay awake),
+`…STOP` (ends whatever is running; `ON` does too, and also recovers a stuck panel)
 
 - **Recommended:** Action → *Send Intent* → Target: **Activity**, Package `io.github.akane599.umbra`,
   Class `io.github.akane599.umbra.ActionActivity`, Action one of the above. It's an invisible
@@ -73,8 +103,8 @@ Actions: `io.github.akane599.umbra.OFF`, `…ON`, `…TOGGLE`
 - Alternative: Target **Broadcast Receiver**, same package and action.
 
 These entry points are exported, so any app on the phone can send these actions. If you don't use
-automation, turn off **Advanced → Commands from other apps**: then only `ON` (turning the screen back on)
-is accepted. The launcher shortcut and the QS tile go through a non-exported `ShortcutActivity` alias
+automation, turn off **Advanced → Commands from other apps**: then only `ON` and `STOP` (ending a
+session) are accepted. The launcher shortcut and the QS tile go through a non-exported `ShortcutActivity` alias
 and aren't affected by this setting.
 
 Note: while the panel is off the system still considers the screen *on*, so Tasker's Display Off/On

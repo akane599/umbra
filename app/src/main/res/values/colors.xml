@@ -16,5 +16,7 @@
     <color name="pk_warn_text">#7A5000</color>
     <color name="pk_danger">#C9433A</color>
     <color name="pk_orb_core">#0E1114</color>
+    <!-- Touch lock overlay sits on arbitrary content behind a dark disc: one fixed mint in both themes. -->
+    <color name="pk_lock_accent">#5EE0B8</color>
 
 </resources>

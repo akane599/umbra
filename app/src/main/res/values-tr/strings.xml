@@ -94,8 +94,8 @@
     <string name="pref_privilege">Yetki kaynağı</string>
     <string name="pref_method">Kapatma yöntemi</string>
 
-    <string name="pref_add_tile">Hızlı ayarlara kutucuk ekle</string>
-    <string name="pref_add_tile_sum">Umbra kutucuğunu tek dokunuşla ekler</string>
+    <string name="pref_add_tile">Hızlı ayar kutucukları ekle</string>
+    <string name="pref_add_tile_sum">Ekranı karart, dokunma kilidi ve uyanık tut; her biri tek dokunuşla</string>
     <string name="pref_grant">Gerekli izinleri ver</string>
     <string name="pref_grant_sum">Bildirim, çizim (overlay) ve pil muafiyeti — Shizuku/root ile tek dokunuşta</string>
     <string name="pref_diag">Tanılama</string>
@@ -104,7 +104,7 @@
     <string name="pref_external">Dış uygulamalardan komut</string>
     <string name="pref_external_on">Tasker vb. paneli kapatabilir. Kapatırsan yalnızca “aç” komutu kabul edilir.</string>
     <string name="pref_external_off">Yalnızca “aç” (ON) kabul edilir; kısayol ve kutucuk etkilenmez</string>
-    <string name="automation_hint">Tasker → Intent Gönder → Hedef: Etkinlik\nPaket io.github.akane599.umbra · Sınıf …ActionActivity\n(Yayın alıcısı da çalışır: …CommandReceiver)</string>
+    <string name="automation_hint">Tasker → Intent Gönder → Hedef: Etkinlik\nPaket io.github.akane599.umbra · Sınıf …ActionActivity\n(Yayın alıcısı da çalışır: …CommandReceiver)\nSTOP her oturumu bitirir; ON takılı kalan paneli de kurtarır.</string>
     <string name="copy_action">%s eylemini kopyala</string>
 
     <!-- Hero card: ways back -->
@@ -146,6 +146,57 @@
     <string name="reason_app">uygulama</string>
     <string name="reason_screen_off">ekran kilidi</string>
     <string name="reason_server_died">yardımcı süreç kapanması</string>
+
+    <!-- Dokunma kilidi ve uyanık tut -->
+    <string name="cat_screen_on">Ekran açık kalsın</string>
+    <string name="mode_lock_title">Dokunma kilidi</string>
+    <string name="mode_lock_sum">Ekran açık kalır, dokunuşlar işlemez. Açmak için kilide basılı tut.</string>
+    <string name="mode_lock_sum_needs_overlay">Önce “Diğer uygulamaların üzerinde göster” izni gerekli · izin için dokun</string>
+    <string name="mode_lock_btn">Kilitle</string>
+    <string name="mode_awake_title">Uyanık tut</string>
+    <string name="mode_awake_sum_off">Sen durdurana ya da güç tuşuna basana kadar ekran kapanmaz</string>
+    <string name="mode_awake_sum_on">Açık · ekran zaman aşımına uğramaz</string>
+
+    <string name="cat_lock">Dokunma kilidi</string>
+    <string name="pref_lock_dim">Ekranı loşlaştır</string>
+    <string name="pref_lock_dim_sum">Alttaki içerik görünür kalır, yalnızca loşlaşır</string>
+    <string name="dim_off">Yok</string>
+    <string name="dim_light">Hafif</string>
+    <string name="dim_medium">Loş</string>
+    <string name="dim_deep">Koyu</string>
+    <string name="pref_lock_badge">Kilidi göster</string>
+    <string name="pref_lock_badge_on">Alt kenarda soluk bir kilit durur</string>
+    <string name="pref_lock_badge_off">Kilit yalnızca ekrana dokununca görünür</string>
+    <string name="pref_lock_full">Sistem hareketlerini de engelle</string>
+    <string name="pref_lock_full_on">Bildirim paneli, açılır bildirimler ve ana ekran, geri ve son uygulamalar da engellenir. Kilide basılı tutmak yine açar. Shizuku veya root gerekir.</string>
+    <string name="pref_lock_full_off">Ana ekrana kaydırma, geri ve bildirim paneli çalışmaya devam eder</string>
+
+    <string name="lock_hint_hold">Açmak için kilide basılı tut</string>
+    <string name="lock_a11y_unlock">Kilidi aç</string>
+    <string name="lock_full_unavailable">Sistem hareketleri açık kalıyor: engellemek için Shizuku veya root gerekir</string>
+    <string name="lock_exit_hold">Kilide basılı tut</string>
+    <string name="lock_notif_title">Dokunma kilidi açık</string>
+    <string name="lock_notif_title_full">Dokunma kilidi açık · sistem hareketleri engelli</string>
+    <string name="lock_notif_preparing">Kilitleniyor…</string>
+    <string name="lock_notif_action">Kilidi aç</string>
+    <string name="awake_notif_title">Ekran açık tutuluyor</string>
+    <string name="awake_notif_text">Ekran zaman aşımına uğramaz. Güç tuşuna bas ya da buradan durdur.</string>
+    <string name="awake_notif_action">Durdur</string>
+    <string name="lock_tile_label">Dokunma kilidi</string>
+    <string name="lock_tile_sub_active">Açık</string>
+    <string name="lock_tile_sub_inactive">Ekran açık kalır</string>
+    <string name="awake_tile_label">Uyanık tut</string>
+    <string name="awake_tile_sub_active">Açık · zaman aşımı yok</string>
+    <string name="awake_tile_sub_inactive">Kapalı</string>
+    <string name="shortcut_lock_short">Dokunma kilidi</string>
+    <string name="shortcut_lock_long">Dokunmayı kilitle, ekran açık kalsın</string>
+    <string name="shortcut_awake_short">Uyanık tut</string>
+    <string name="shortcut_awake_long">Ekranı açık tut</string>
+    <string name="add_tile_title">Kutucuk ekle</string>
+    <string name="err_overlay_title">Dokunma kilidi için üstte gösterme izni gerekli</string>
+    <string name="err_overlay_body">Umbra için “Diğer uygulamaların üzerinde göster” iznini ver, sonra tekrar dene.</string>
+    <string name="err_action_overlay">İzin ver</string>
+    <string name="reason_switch">mod değişimi</string>
 
     <string name="version_fmt">Sürüm %s</string>
 </resources>

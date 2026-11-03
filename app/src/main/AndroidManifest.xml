@@ -41,6 +41,9 @@
                 <action android:name="io.github.akane599.umbra.OFF" />
                 <action android:name="io.github.akane599.umbra.ON" />
                 <action android:name="io.github.akane599.umbra.TOGGLE" />
+                <action android:name="io.github.akane599.umbra.LOCK" />
+                <action android:name="io.github.akane599.umbra.AWAKE" />
+                <action android:name="io.github.akane599.umbra.STOP" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -58,7 +61,7 @@
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Keeps the display panel powered off while the system stays awake; hosts the privileged helper and exit listeners." />
+                android:value="Runs a user-started screen session: keeps the display panel off while the system stays awake, or keeps the display on with touch input locked or the timeout disabled; hosts the privileged helper and exit listeners." />
         </service>
 
         <service
@@ -75,6 +78,34 @@
                 android:value="true" />
         </service>
 
+        <service
+            android:name=".LockTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_lock"
+            android:label="@string/lock_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
+        <service
+            android:name=".AwakeTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_awake"
+            android:label="@string/awake_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
+
         <receiver
             android:name=".CommandReceiver"
             android:exported="true">
@@ -82,6 +113,9 @@
                 <action android:name="io.github.akane599.umbra.OFF" />
                 <action android:name="io.github.akane599.umbra.ON" />
                 <action android:name="io.github.akane599.umbra.TOGGLE" />
+                <action android:name="io.github.akane599.umbra.LOCK" />
+                <action android:name="io.github.akane599.umbra.AWAKE" />
+                <action android:name="io.github.akane599.umbra.STOP" />
             </intent-filter>
         </receiver>
 

@@ -20,6 +20,11 @@ class AppSettings(context: Context) {
 
     val allowExternal: Boolean get() = sp.getBoolean(K_ALLOW_EXTERNAL, true)
 
+    /** Touch lock: scrim strength in percent (0 = no dim). */
+    val lockDim: Int get() = sp.getString(K_LOCK_DIM, "0")?.toIntOrNull()?.coerceIn(0, 95) ?: 0
+    val lockBadge: Boolean get() = sp.getBoolean(K_LOCK_BADGE, true)
+    val lockFull: Boolean get() = sp.getBoolean(K_LOCK_FULL, false)
+
     val lastSessionMs: Long get() = sp.getLong(K_LAST_MS, -1L)
     val lastSessionReason: String? get() = sp.getString(K_LAST_REASON, null)
     val lastSessionEnd: Long get() = sp.getLong(K_LAST_END, 0L)
@@ -69,6 +74,9 @@ class AppSettings(context: Context) {
         const val K_HOLD = "hold_off"
         const val K_SETUP_DONE = "setup_done"
         const val K_ALLOW_EXTERNAL = "allow_external"
+        const val K_LOCK_DIM = "lock_dim"
+        const val K_LOCK_BADGE = "lock_badge"
+        const val K_LOCK_FULL = "lock_full"
         private const val K_LAST_MS = "last_session_ms"
         private const val K_LAST_REASON = "last_session_reason"
         private const val K_LAST_END = "last_session_end"

@@ -11,6 +11,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.content.res.Configuration
+import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -26,13 +27,20 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 
 /**
- * Foreground service that runs a panel-off session: starts the privileged server, turns the
- * panel off, listens for exit triggers (volume keys, power key, double tap, shake, timer,
- * notification, QS tile, Tasker) and safely turns the panel back on.
+ * Foreground service that runs one session at a time, in one of three modes:
+ *  - [Mode.PANEL]: starts the privileged server, turns the panel off, listens for exit triggers
+ *    (volume keys, power key, double tap, shake, timer, notification, QS tile, Tasker) and safely
+ *    turns the panel back on.
+ *  - [Mode.LOCK]: touch lock. The display stays on and never times out; an overlay swallows
+ *    touches, optionally dimmed. With Shizuku/root the volume combo unlocks too, and "full lock"
+ *    also turns off the shade, heads-up alerts and home/back/recents (the system drops those flags
+ *    by itself if the helper dies, so a crash can't leave the phone stuck).
+ *  - [Mode.AWAKE]: keeps the screen on with no timeout until stopped or the power key is pressed.
  */
 class PanelService : Service() {
 
     enum class State { IDLE, STARTING, ACTIVE, STOPPING }
+    enum class Mode { PANEL, LOCK, AWAKE }
 
     private lateinit var settings: AppSettings
     private lateinit var power: PowerManager
@@ -46,9 +54,16 @@ class PanelService : Service() {
     private var sessionStart = 0L
     private var wakeLock: PowerManager.WakeLock? = null
     private var shield: TouchShield? = null
+    private var lock: LockOverlay? = null
+    /** Set on the worker thread once the server has turned off the shade and navigation. */
+    @Volatile private var systemBlocked = false
+    /** A different mode was requested while a session was running; started once the current one ends. */
+    private var pending: Pair<Mode, String>? = null
     private var shake: ShakeDetector? = null
     private var screenReceiverRegistered = false
-    private var keysOk = false
+    @Volatile private var keysOk = false
+    /** Bumped whenever a session starts or ends, so a slow activation can tell it was cancelled. */
+    @Volatile private var generation = 0
     private var powerPressedAt = 0L
     private var methodInfo = ""
     private var exitSummary = ""
@@ -61,6 +76,7 @@ class PanelService : Service() {
     }
 
     private val timerRunnable = Runnable { deactivate(restorePanel = true, reason = "timer") }
+    private var showLock: Runnable? = null
 
     /** Power key was pressed but the system didn't go to sleep: the panel was most likely turned on already. */
     private val powerCheck = Runnable {
@@ -80,20 +96,26 @@ class PanelService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val action = intent?.action
+        // So the first notification already speaks for the mode being started.
+        if (state == State.IDLE) modeFor(action)?.let { mode = it }
         // After startForegroundService we must go foreground within 5 s, whatever happens.
         goForeground()
         val source = intent?.getStringExtra(EXTRA_SOURCE) ?: "?"
-        when (intent?.action) {
-            ACTION_OFF -> if (state == State.IDLE) activate(source)
-            ACTION_ON -> if (state == State.ACTIVE || state == State.STARTING) {
-                deactivate(restorePanel = true, reason = source)
-            } else if (state == State.IDLE) {
-                forceOn()
+        when (action) {
+            ACTION_OFF -> start(Mode.PANEL, source)
+            ACTION_LOCK -> start(Mode.LOCK, source)
+            ACTION_AWAKE -> start(Mode.AWAKE, source)
+            ACTION_ON, ACTION_STOP -> when (state) {
+                State.ACTIVE, State.STARTING -> deactivate(restorePanel = true, reason = source)
+                State.IDLE -> if (action == ACTION_ON) forceOn() else finishService()
+                // Mid-switch: an explicit stop cancels the mode that was about to start.
+                State.STOPPING -> pending = null
             }
-            ACTION_TOGGLE -> when (state) {
-                State.IDLE -> activate(source)
-                State.STARTING, State.ACTIVE -> deactivate(restorePanel = true, reason = source)
-                State.STOPPING -> Unit
+            ACTION_TOGGLE -> when {
+                state == State.IDLE -> start(Mode.PANEL, source)
+                mode == Mode.PANEL && state != State.STOPPING -> deactivate(restorePanel = true, reason = source)
+                else -> start(Mode.PANEL, source)
             }
             else -> if (state == State.IDLE) finishService()
         }
@@ -102,11 +124,34 @@ class PanelService : Service() {
 
     // ---------------------------------------------------------------- activation
 
-    private fun activate(source: String) {
+    private fun start(m: Mode, source: String) {
+        when {
+            state == State.IDLE -> activate(m, source)
+            state == State.ACTIVE && mode != m -> {
+                // Switch in place: end the current session, then start the requested one.
+                pending = m to source
+                deactivate(restorePanel = true, reason = "switch")
+            }
+            else -> Unit // already running in this mode, or mid-transition
+        }
+    }
+
+    private fun activate(m: Mode, source: String) {
         if (!power.isInteractive) {
             finishService()
             return
         }
+        mode = m
+        generation++
+        updateNotification() // after a switch the old mode's notification would linger otherwise
+        when (m) {
+            Mode.PANEL -> activatePanel(source)
+            Mode.LOCK -> activateLock(source)
+            Mode.AWAKE -> activateAwake()
+        }
+    }
+
+    private fun activatePanel(source: String) {
         setState(State.STARTING)
         val privilege = settings.privilegeMode
         val method = settings.powerMethod
@@ -157,6 +202,109 @@ class PanelService : Service() {
         }
     }
 
+    private fun activateAwake() {
+        setState(State.ACTIVE)
+        acquireWakeLock(timeoutMs = null)
+        registerScreenReceiver()
+        updateNotification()
+    }
+
+    private fun activateLock(source: String) {
+        setState(State.STARTING)
+        keysOk = false
+        systemBlocked = false
+        val privilege = settings.privilegeMode
+        val full = settings.lockFull
+        val overlayOk = Settings.canDrawOverlays(this)
+        // The helper is optional for touch lock (it adds the volume combo and full lock), so skip it
+        // when it can't possibly start rather than waiting on a doomed attempt.
+        val tryHelper = !(privilege == "shizuku" && PrivilegedBridge.shizukuState() != PrivilegedBridge.Companion.ShizukuState.READY)
+        val delay = when (source) {
+            "tile" -> 300L          // while the notification shade collapses
+            "app", "shortcut" -> 450L  // while the activity moves to the background
+            else -> 0L
+        }
+        if (overlayOk) {
+            showLock = Runnable { onLockReady() }.also { main.postDelayed(it, delay) }
+        }
+        if (!tryHelper && !overlayOk) {
+            onLockReady()
+            return
+        }
+        if (!tryHelper) return
+
+        val gen = generation
+        val live = { !destroyed && generation == gen }
+        worker.post {
+            val br = runCatching { newBridge().also { it.start(privilege) } }
+                .onFailure { Log.i(TAG, "touch lock without helper: ${it.message}") }
+                .getOrNull() ?: run {
+                if (!overlayOk) onMain { if (state == State.STARTING) onLockReady() }
+                if (full) onMain { if (live()) toast(R.string.lock_full_unavailable) }
+                return@post
+            }
+            if (!live()) {
+                // Unlocked (or destroyed) while the helper was starting: nothing left to set up.
+                br.stop()
+                return@post
+            }
+            bridge = br
+            if (!overlayOk) {
+                runCatching { br.request("grant $packageName") }.onSuccess { settings.setupDone = true }
+                onMain {
+                    if (state == State.STARTING) {
+                        showLock = Runnable { onLockReady() }.also { main.postDelayed(it, delay) }
+                    }
+                }
+            }
+            keysOk = runCatching { br.request("keys") }.isSuccess
+            if (full && live()) {
+                runCatching { br.request("collapse") }
+                systemBlocked = runCatching { br.request("system off") }
+                    .onFailure { Log.w(TAG, "system off failed", it) }.isSuccess
+            }
+            if (!live()) {
+                // Nobody is left to unlock: the server restores the system UI as it exits.
+                // (After an unlock, the queued deactivation task does the same with this bridge.)
+                if (!destroyed) return@post
+                br.stop()
+                bridge = null
+                return@post
+            }
+            val blocked = systemBlocked
+            onMain {
+                if (full && !blocked && live()) toast(R.string.lock_full_unavailable)
+                if (state == State.ACTIVE && mode == Mode.LOCK) updateNotification()
+            }
+        }
+    }
+
+    /** Overlay permission is settled: show the lock, or explain why it can't be shown. */
+    private fun onLockReady() {
+        showLock = null
+        if (state != State.STARTING || mode != Mode.LOCK) return
+        if (!power.isInteractive) {
+            deactivate(restorePanel = false, reason = "slept_while_starting")
+            return
+        }
+        val overlay = LockOverlay(this) { main.post { deactivate(restorePanel = false, reason = "hold") } }
+        val dim = settings.lockDim / 100f
+        if (!overlay.show(dim, settings.lockBadge)) {
+            settings.recordError(ActivationError.OVERLAY, "overlay permission missing")
+            toast(ActivationError.OVERLAY.title)
+            deactivate(restorePanel = false, reason = "overlay_denied")
+            return
+        }
+        lock = overlay
+        settings.clearError()
+        setState(State.ACTIVE)
+        acquireWakeLock(timeoutMs = null)
+        registerScreenReceiver()
+        updateNotification()
+    }
+
+    private fun toast(res: Int) = Toast.makeText(applicationContext, res, Toast.LENGTH_LONG).show()
+
     /**
      * Hops from the worker thread to the main thread. Skips the block if this service instance was
      * destroyed: [state] is shared across instances, so a late callback from an old instance must not
@@ -178,7 +326,7 @@ class PanelService : Service() {
         sessionStart = SystemClock.elapsedRealtime()
         methodInfo = "${backend?.label ?: "?"} · ${info.substringBefore(' ')}"
 
-        if (settings.keepAwake) acquireWakeLock()
+        if (settings.keepAwake) acquireWakeLock(timeoutMs = 12 * 60 * 60 * 1000L)
         registerScreenReceiver()
 
         val exits = mutableListOf<String>()
@@ -231,20 +379,43 @@ class PanelService : Service() {
      */
     private fun deactivate(restorePanel: Boolean, wake: Boolean = false, reason: String) {
         if (state == State.IDLE || state == State.STOPPING) return
-        Log.i(TAG, "deactivate: $reason (restore=$restorePanel wake=$wake)")
-        if (state == State.ACTIVE && sessionStart > 0) {
+        Log.i(TAG, "deactivate $mode: $reason (restore=$restorePanel wake=$wake)")
+        // The "last session" line on the main screen is about the panel, so only panel sessions count.
+        if (mode == Mode.PANEL && state == State.ACTIVE && sessionStart > 0) {
             settings.recordSession(SystemClock.elapsedRealtime() - sessionStart, reason)
         }
         sessionStart = 0L
         setState(State.STOPPING)
         main.removeCallbacks(timerRunnable)
         main.removeCallbacks(powerCheck)
+        showLock?.let { main.removeCallbacks(it) }
+        showLock = null
         shield?.hide()
         shield = null
         shake?.stop()
         shake = null
+        lock?.dismiss()
+        lock = null
+        generation++
 
         val privilege = settings.privilegeMode
+        if (mode != Mode.PANEL) {
+            // Nothing below needs these; don't hold full brightness while the worker catches up.
+            releaseWakeLock()
+            unregisterScreenReceiver()
+            worker.post {
+                val br = bridge
+                if (systemBlocked) {
+                    // Normally the live server restores it; if that server is gone, so are its flags.
+                    if (br != null && br.alive) runCatching { br.request("system on") }
+                    systemBlocked = false
+                }
+                br?.stop()
+                bridge = null
+                onMain { endSession() }
+            }
+            return
+        }
         worker.post {
             val br = bridge
             // If the device slept, the server must stop managing the panel (holder + restore on exit).
@@ -265,13 +436,17 @@ class PanelService : Service() {
             if (wake) runCatching { br?.request("wake") }
             br?.stop()
             bridge = null
-            onMain {
-                releaseWakeLock()
-                unregisterScreenReceiver()
-                setState(State.IDLE)
-                finishService()
-            }
+            onMain { endSession() }
         }
+    }
+
+    private fun endSession() {
+        releaseWakeLock()
+        unregisterScreenReceiver()
+        setState(State.IDLE)
+        val next = pending
+        pending = null
+        if (next != null) activate(next.first, next.second) else finishService()
     }
 
     /** "on" command with no session running: a recovery path that returns the panel to normal. */
@@ -300,14 +475,30 @@ class PanelService : Service() {
     private fun newBridge() = PrivilegedBridge(
         this,
         onEvent = { evt -> onMain { onBridgeEvent(evt) } },
-        onDeath = { onMain { if (state == State.ACTIVE) deactivate(restorePanel = true, reason = "server_died") } },
+        onDeath = { onMain { onServerDied() } },
     )
+
+    private fun onServerDied() {
+        if (state != State.ACTIVE && !(mode == Mode.LOCK && state == State.STARTING)) return
+        when (mode) {
+            Mode.PANEL -> deactivate(restorePanel = true, reason = "server_died")
+            Mode.LOCK -> {
+                // The lock itself doesn't need the helper: carry on overlay-only. The system dropped
+                // the shade/navigation flags along with the dead process.
+                keysOk = false
+                bridge = null
+                systemBlocked = false
+                updateNotification()
+            }
+            Mode.AWAKE -> Unit
+        }
+    }
 
     private fun onBridgeEvent(evt: String) {
         if (state != State.ACTIVE) return
         when (evt) {
-            "combo" -> if (settings.exitVolume) deactivate(restorePanel = true, reason = "volume")
-            "power" -> {
+            "combo" -> if (mode == Mode.LOCK || settings.exitVolume) deactivate(restorePanel = true, reason = "volume")
+            "power" -> if (mode == Mode.PANEL) {
                 powerPressedAt = SystemClock.elapsedRealtime()
                 main.removeCallbacks(powerCheck)
                 main.postDelayed(powerCheck, POWER_SETTLE_MS)
@@ -317,6 +508,11 @@ class PanelService : Service() {
 
     private fun onScreenOff() {
         if (state != State.ACTIVE) return
+        if (mode != Mode.PANEL) {
+            // Power key or a timeout we didn't block: the user is done with the screen.
+            deactivate(restorePanel = false, reason = "screen_off")
+            return
+        }
         main.removeCallbacks(powerCheck)
         // System went to sleep. DisplayPowerController owns the panel now; sending "on" while
         // asleep would light it, so only wake the device (if it was the power key).
@@ -330,7 +526,7 @@ class PanelService : Service() {
         if (newConfig.orientation != lastOrientation) {
             lastOrientation = newConfig.orientation
             // Some devices turn the panel back on when rotating; reapply.
-            if (state == State.ACTIVE) {
+            if (state == State.ACTIVE && mode == Mode.PANEL) {
                 val method = settings.powerMethod
                 worker.post { runCatching { bridge?.request("off $method") } }
             }
@@ -339,16 +535,20 @@ class PanelService : Service() {
 
     // ---------------------------------------------------------------- helpers
 
+    /**
+     * Keeps the system believing the screen is in use so it doesn't time out. [timeoutMs] null holds
+     * it until the session ends (touch lock, stay awake): those end on the power key or a stop command.
+     */
     @Suppress("DEPRECATION")
-    private fun acquireWakeLock() {
+    @SuppressLint("WakelockTimeout")
+    private fun acquireWakeLock(timeoutMs: Long?) {
         if (wakeLock?.isHeld == true) return
-        // Keep the system believing the screen is on so it doesn't sleep on timeout.
         wakeLock = power.newWakeLock(
             PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ON_AFTER_RELEASE,
             "Umbra:keepAwake",
         ).apply {
             setReferenceCounted(false)
-            acquire(12 * 60 * 60 * 1000L)
+            if (timeoutMs != null) acquire(timeoutMs) else acquire()
         }
     }
 
@@ -390,9 +590,13 @@ class PanelService : Service() {
         if (state == State.ACTIVE || state == State.STARTING) {
             shield?.hide()
             shake?.stop()
+            lock?.hideNow()
+            lock = null
             releaseWakeLock()
             unregisterScreenReceiver()
-            bridge?.let { br -> Thread { runCatching { br.request("on", 2000) }; br.stop() }.start() }
+            // The server restores the system UI when it exits, so stop() covers touch lock.
+            val panel = mode == Mode.PANEL
+            bridge?.let { br -> Thread { if (panel) runCatching { br.request("on", 2000) }; br.stop() }.start() }
             bridge = null
         }
         // Reset the shared state no matter where we ended up; if it stayed stuck in STOPPING,
@@ -416,33 +620,64 @@ class PanelService : Service() {
         }
     }
 
+    /** Ways out of a touch lock that will actually work right now. */
+    private fun lockExits(): String = buildList {
+        add(getString(R.string.lock_exit_hold))
+        if (keysOk) add(getString(R.string.exit_short_volume))
+        add(getString(R.string.exit_short_power))
+    }.joinToString(" · ")
+
     private fun buildNotification(): Notification {
         val active = state == State.ACTIVE
         val onIntent = PendingIntent.getService(
             this, 1,
-            Intent(this, PanelService::class.java).setAction(ACTION_ON).putExtra(EXTRA_SOURCE, "notification"),
+            Intent(this, PanelService::class.java).setAction(ACTION_STOP).putExtra(EXTRA_SOURCE, "notification"),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val openApp = PendingIntent.getActivity(
             this, 2, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
+        val icon: Int
+        val title: String
+        val text: String
+        val big: String
+        val actionLabel: Int
+        when (mode) {
+            Mode.PANEL -> {
+                icon = R.drawable.ic_tile
+                title = getString(if (active) R.string.notif_title_active else R.string.notif_title_preparing)
+                text = if (active) exitSummary else getString(R.string.notif_text_preparing)
+                big = if (active) "$exitSummary\n$methodInfo" else text
+                actionLabel = R.string.notif_action_on
+            }
+            Mode.LOCK -> {
+                icon = R.drawable.ic_lock
+                title = getString(if (systemBlocked) R.string.lock_notif_title_full else R.string.lock_notif_title)
+                text = if (active) lockExits() else getString(R.string.lock_notif_preparing)
+                big = text
+                actionLabel = R.string.lock_notif_action
+            }
+            Mode.AWAKE -> {
+                icon = R.drawable.ic_awake
+                title = getString(R.string.awake_notif_title)
+                text = getString(R.string.awake_notif_text)
+                big = text
+                actionLabel = R.string.awake_notif_action
+            }
+        }
         return NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(R.drawable.ic_tile)
-            .setContentTitle(getString(if (active) R.string.notif_title_active else R.string.notif_title_preparing))
-            .setContentText(if (active) exitSummary else getString(R.string.notif_text_preparing))
-            .setStyle(
-                NotificationCompat.BigTextStyle().bigText(
-                    if (active) "$exitSummary\n$methodInfo" else getString(R.string.notif_text_preparing),
-                ),
-            )
+            .setSmallIcon(icon)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(big))
             .setOngoing(true)
             .setSilent(true)
             .setShowWhen(false)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(openApp)
-            .apply { if (active) addAction(0, getString(R.string.notif_action_on), onIntent) }
+            .apply { if (active) addAction(0, getString(actionLabel), onIntent) }
             .build()
     }
 
@@ -460,6 +695,13 @@ class PanelService : Service() {
         const val ACTION_OFF = "io.github.akane599.umbra.OFF"
         const val ACTION_ON = "io.github.akane599.umbra.ON"
         const val ACTION_TOGGLE = "io.github.akane599.umbra.TOGGLE"
+        const val ACTION_LOCK = "io.github.akane599.umbra.LOCK"
+        const val ACTION_AWAKE = "io.github.akane599.umbra.AWAKE"
+        /** Ends whatever session is running (ON does the same, and also recovers a stuck panel). */
+        const val ACTION_STOP = "io.github.akane599.umbra.STOP"
+        val ALL_ACTIONS = setOf(ACTION_OFF, ACTION_ON, ACTION_TOGGLE, ACTION_LOCK, ACTION_AWAKE, ACTION_STOP)
+        /** Actions that only end a session; always accepted, even when outside commands are disabled. */
+        val SAFE_ACTIONS = setOf(ACTION_ON, ACTION_STOP)
         const val EXTRA_SOURCE = "source"
         private const val CHANNEL = "panel"
         private const val NOTIF_ID = 1
@@ -475,7 +717,21 @@ class PanelService : Service() {
         fun addListener(l: (State) -> Unit) { listeners += l }
         fun removeListener(l: (State) -> Unit) { listeners -= l }
 
+        /** Mode of the running (or last) session. Only meaningful while [isActive]. */
+        @Volatile
+        var mode: Mode = Mode.PANEL
+            private set
+
         val isActive: Boolean get() = state == State.ACTIVE || state == State.STARTING
+
+        fun isActive(m: Mode): Boolean = isActive && mode == m
+
+        private fun modeFor(action: String?): Mode? = when (action) {
+            ACTION_OFF, ACTION_TOGGLE -> Mode.PANEL
+            ACTION_LOCK -> Mode.LOCK
+            ACTION_AWAKE -> Mode.AWAKE
+            else -> null
+        }
 
         /** Sends a command to the service. Returns false if starting an FGS from the background is blocked. */
         fun command(context: Context, action: String, source: String): Boolean {

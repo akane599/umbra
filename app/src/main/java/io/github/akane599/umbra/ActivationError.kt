@@ -14,7 +14,10 @@ enum class ActivationError(
     SHIZUKU_PERMISSION(R.string.err_shizuku_perm_title, R.string.err_shizuku_perm_body, R.string.err_action_grant),
     SHIZUKU_OFF(R.string.err_shizuku_off_title, R.string.err_shizuku_off_body, R.string.err_action_open_shizuku),
     ROOT_DENIED(R.string.err_root_title, R.string.err_root_body, R.string.err_action_diag),
-    GENERIC(R.string.err_generic_title, R.string.err_generic_body, R.string.err_action_diag);
+    GENERIC(R.string.err_generic_title, R.string.err_generic_body, R.string.err_action_diag),
+
+    /** Touch lock couldn't draw its overlay. Recorded directly, never classified from bridge text. */
+    OVERLAY(R.string.err_overlay_title, R.string.err_overlay_body, R.string.err_action_overlay);
 
     companion object {
         fun classify(raw: String, privilegeMode: String): ActivationError {

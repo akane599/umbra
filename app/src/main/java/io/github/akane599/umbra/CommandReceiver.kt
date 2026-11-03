@@ -10,14 +10,14 @@ import android.util.Log
  * Starting an FGS from the background requires the app to be exempt from battery optimization;
  * "Grant required permissions" does this automatically via Shizuku/root.
  *
- * Any app can send this broadcast. If "Commands from other apps" is off, only ON
- * (turning the panel back on) is accepted.
+ * Any app can send this broadcast. If "Commands from other apps" is off, only ON and STOP
+ * (ending a session) are accepted.
  */
 class CommandReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
-        if (action != PanelService.ACTION_OFF && action != PanelService.ACTION_ON && action != PanelService.ACTION_TOGGLE) return
-        if (action != PanelService.ACTION_ON && !AppSettings(context).allowExternal) {
+        if (action !in PanelService.ALL_ACTIONS) return
+        if (action !in PanelService.SAFE_ACTIONS && !AppSettings(context).allowExternal) {
             Log.w(TAG, "external command rejected: $action (disabled in settings)")
             return
         }

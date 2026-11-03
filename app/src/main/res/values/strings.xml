@@ -95,8 +95,8 @@
     <string name="pref_privilege">Privilege source</string>
     <string name="pref_method">Power-off method</string>
 
-    <string name="pref_add_tile">Add Quick Settings tile</string>
-    <string name="pref_add_tile_sum">Adds the Umbra tile in one tap</string>
+    <string name="pref_add_tile">Add Quick Settings tiles</string>
+    <string name="pref_add_tile_sum">Screen off, touch lock and stay awake, one tap each</string>
     <string name="pref_grant">Grant required permissions</string>
     <string name="pref_grant_sum">Notifications, overlay and battery exemption, in one tap via Shizuku/root</string>
     <string name="pref_diag">Diagnostics</string>
@@ -105,7 +105,7 @@
     <string name="pref_external">Commands from other apps</string>
     <string name="pref_external_on">Tasker and others can turn the screen off. Disable to accept only “on”.</string>
     <string name="pref_external_off">Only “on” (ON) is accepted; shortcuts and the tile are unaffected</string>
-    <string name="automation_hint">Tasker → Send Intent → Target: Activity\nPackage io.github.akane599.umbra · Class …ActionActivity\n(The broadcast receiver works too: …CommandReceiver)</string>
+    <string name="automation_hint">Tasker → Send Intent → Target: Activity\nPackage io.github.akane599.umbra · Class …ActionActivity\n(The broadcast receiver works too: …CommandReceiver)\nSTOP ends any session; ON also recovers a stuck panel.</string>
     <string name="copy_action">Copy %s action</string>
 
     <!-- Hero card: ways back -->
@@ -147,6 +147,57 @@
     <string name="reason_app">the app</string>
     <string name="reason_screen_off">screen lock</string>
     <string name="reason_server_died">helper exit</string>
+
+    <!-- Touch lock and stay awake -->
+    <string name="cat_screen_on">Screen stays on</string>
+    <string name="mode_lock_title">Touch lock</string>
+    <string name="mode_lock_sum">The display stays on and ignores touches. Hold the lock to undo.</string>
+    <string name="mode_lock_sum_needs_overlay">Needs “Display over other apps” first · tap to allow</string>
+    <string name="mode_lock_btn">Lock</string>
+    <string name="mode_awake_title">Stay awake</string>
+    <string name="mode_awake_sum_off">No screen timeout until you stop it or press power</string>
+    <string name="mode_awake_sum_on">On · the screen won\'t time out</string>
+
+    <string name="cat_lock">Touch lock</string>
+    <string name="pref_lock_dim">Dim the screen</string>
+    <string name="pref_lock_dim_sum">What\'s underneath stays visible, only darker</string>
+    <string name="dim_off">Off</string>
+    <string name="dim_light">Soft</string>
+    <string name="dim_medium">Dim</string>
+    <string name="dim_deep">Dark</string>
+    <string name="pref_lock_badge">Show the lock</string>
+    <string name="pref_lock_badge_on">A faint lock stays near the bottom edge</string>
+    <string name="pref_lock_badge_off">The lock appears only when you touch the screen</string>
+    <string name="pref_lock_full">Block system gestures too</string>
+    <string name="pref_lock_full_on">The notification shade, pop-up notifications and home, back and recents are blocked too. Hold the lock still unlocks. Needs Shizuku or root.</string>
+    <string name="pref_lock_full_off">Swipe-home, back and the notification shade still work</string>
+
+    <string name="lock_hint_hold">Hold the lock to unlock</string>
+    <string name="lock_a11y_unlock">Unlock</string>
+    <string name="lock_full_unavailable">System gestures stay active: blocking them needs Shizuku or root</string>
+    <string name="lock_exit_hold">Hold the lock</string>
+    <string name="lock_notif_title">Touch lock is on</string>
+    <string name="lock_notif_title_full">Touch lock is on · system gestures blocked</string>
+    <string name="lock_notif_preparing">Locking…</string>
+    <string name="lock_notif_action">Unlock</string>
+    <string name="awake_notif_title">Staying awake</string>
+    <string name="awake_notif_text">The screen won\'t time out. Press power or stop it here.</string>
+    <string name="awake_notif_action">Stop</string>
+    <string name="lock_tile_label">Touch lock</string>
+    <string name="lock_tile_sub_active">On</string>
+    <string name="lock_tile_sub_inactive">Display stays on</string>
+    <string name="awake_tile_label">Stay awake</string>
+    <string name="awake_tile_sub_active">On · no timeout</string>
+    <string name="awake_tile_sub_inactive">Off</string>
+    <string name="shortcut_lock_short">Touch lock</string>
+    <string name="shortcut_lock_long">Lock touch, keep the display on</string>
+    <string name="shortcut_awake_short">Stay awake</string>
+    <string name="shortcut_awake_long">Keep the screen on</string>
+    <string name="add_tile_title">Add a tile</string>
+    <string name="err_overlay_title">Touch lock needs overlay access</string>
+    <string name="err_overlay_body">Allow “Display over other apps” for Umbra, then try again.</string>
+    <string name="err_action_overlay">Allow</string>
+    <string name="reason_switch">switching modes</string>
 
     <string name="version_fmt">Version %s</string>
 </resources>
