@@ -103,7 +103,7 @@
 
     <string name="pref_external">Dış uygulamalardan komut</string>
     <string name="pref_external_on">Herhangi bir uygulama (Tasker vb.) ekranı karartabilir, dokunma kilidini başlatabilir ya da ekranı açık tutabilir. Kapatırsan yalnızca “aç” ve “durdur” kabul edilir.</string>
-    <string name="pref_external_off">Yalnızca “aç” ve “durdur” (ON, STOP) kabul edilir; kısayol ve kutucuklar etkilenmez</string>
+    <string name="pref_external_off">Yalnızca “aç” ve “durdur” (ON, STOP) kabul edilir; kısayol ve kutucuklar etkilenmez. Tasker vb. otomasyon için etkinleştir.</string>
     <string name="automation_hint">Tasker → Intent Gönder → Hedef: Etkinlik\nPaket io.github.akane599.umbra · Sınıf …ActionActivity\n(Yayın alıcısı da çalışır: …CommandReceiver)\nSTOP her oturumu bitirir; ON takılı kalan paneli de kurtarır.</string>
     <string name="copy_action">%s eylemini kopyala</string>
 

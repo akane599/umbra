@@ -100,8 +100,8 @@ Eylemler: `io.github.akane599.umbra.OFF`, `…ON`, `…TOGGLE`, `…LOCK` (dokun
   koşulda çalışır.
 - Alternatif: Target **Broadcast Receiver**, aynı paket ve eylem.
 
-Bu giriş noktaları dışa açıktır; telefondaki herhangi bir uygulama da bu eylemleri gönderebilir.
-Otomasyon kullanmıyorsan **Gelişmiş → Dış uygulamalardan komut** anahtarını kapat: o zaman yalnızca `ON` ve `STOP`
+Önce **Gelişmiş → Dış uygulamalardan komut** anahtarını aç (varsayılan kapalı). Bu giriş noktaları dışa açıktır;
+anahtar açıkken telefondaki herhangi bir uygulama bu eylemleri gönderebilir, kapalıyken yalnızca `ON` ve `STOP`
 (oturumu bitirme) kabul edilir. Başlatıcı kısayolu ve QS kutucuğu dışa kapalı bir `ShortcutActivity`
 alias'ı üzerinden çalıştığı için bu ayardan etkilenmez.
 

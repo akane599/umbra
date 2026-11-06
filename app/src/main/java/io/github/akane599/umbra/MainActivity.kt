@@ -610,7 +610,7 @@ class MainActivity : AppCompatActivity() {
             R.array.method_entries, R.array.method_values,
         )
         switchRow(
-            box, R.drawable.ic_bolt, R.string.pref_external, AppSettings.K_ALLOW_EXTERNAL, true,
+            box, R.drawable.ic_bolt, R.string.pref_external, AppSettings.K_ALLOW_EXTERNAL, AppSettings.DEF_ALLOW_EXTERNAL,
             on = R.string.pref_external_on, off = R.string.pref_external_off,
         )
         val code = LinearLayout(this).apply {

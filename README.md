@@ -110,9 +110,9 @@ Actions: `io.github.akane599.umbra.OFF`, `…ON`, `…TOGGLE`, `…LOCK` (touch 
   activity and works in every state.
 - Alternative: Target **Broadcast Receiver**, same package and action.
 
-These entry points are exported, so any app on the phone can send these actions. If you don't use
-automation, turn off **Advanced → Commands from other apps**: then only `ON` and `STOP` (ending a
-session) are accepted. The launcher shortcut and the QS tile go through a non-exported `ShortcutActivity` alias
+First turn on **Advanced → Commands from other apps** (off by default). These entry points are
+exported, so with the switch on any app on the phone can send these actions; with it off only `ON` and
+`STOP` (ending a session) are accepted. The launcher shortcut and the QS tile go through a non-exported `ShortcutActivity` alias
 and aren't affected by this setting.
 
 Note: while the panel is off the system still considers the screen *on*, so Tasker's Display Off/On

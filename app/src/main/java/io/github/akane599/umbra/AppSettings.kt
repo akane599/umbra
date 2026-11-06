@@ -18,7 +18,7 @@ class AppSettings(context: Context) {
     val collapseShade: Boolean get() = sp.getBoolean(K_COLLAPSE, true)
     val holdOff: Boolean get() = sp.getBoolean(K_HOLD, true)
 
-    val allowExternal: Boolean get() = sp.getBoolean(K_ALLOW_EXTERNAL, true)
+    val allowExternal: Boolean get() = sp.getBoolean(K_ALLOW_EXTERNAL, DEF_ALLOW_EXTERNAL)
 
     /** Touch lock: scrim strength in percent (0 = no dim). */
     val lockDim: Int get() = sp.getString(K_LOCK_DIM, "0")?.toIntOrNull()?.coerceIn(0, 95) ?: 0
@@ -74,6 +74,8 @@ class AppSettings(context: Context) {
         const val K_HOLD = "hold_off"
         const val K_SETUP_DONE = "setup_done"
         const val K_ALLOW_EXTERNAL = "allow_external"
+        /** Off: any installed app could otherwise start sessions (OFF/LOCK/AWAKE); ON and STOP are always accepted. */
+        const val DEF_ALLOW_EXTERNAL = false
         const val K_LOCK_DIM = "lock_dim"
         const val K_LOCK_BADGE = "lock_badge"
         const val K_LOCK_FULL = "lock_full"
