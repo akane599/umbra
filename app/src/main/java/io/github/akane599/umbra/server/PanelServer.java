@@ -65,7 +65,8 @@ public final class PanelServer {
     private static volatile boolean panelOff;
     private static volatile String offMethod = "";
 
-    private static List<IBinder> cachedTokens;
+    /** Package-private so unit tests can supply fake panels. */
+    static List<IBinder> cachedTokens;
     private static Method tokenMethod;
     /** Panels we actually turned off this session; "on" and the holder only touch these. */
     private static volatile List<IBinder> offTokens;
@@ -73,6 +74,19 @@ public final class PanelServer {
     private static Throwable displayControlError;
 
     private static Method setPowerModeMethod;
+
+    /** SurfaceControl.setDisplayPowerMode for one panel; a field so unit tests can stand in for SurfaceFlinger. */
+    interface PowerModeSetter {
+        void set(IBinder token, int mode) throws Exception;
+    }
+
+    static PowerModeSetter powerModeSetter = PanelServer::setDisplayPowerMode;
+
+    /** Set by {@link #restoreAndExit()}; from then on nothing may turn the panel off. Guarded by POWER_LOCK. */
+    private static boolean exiting;
+
+    /** Ends the process at once; a field so unit tests can run the exit path without dying. */
+    static Runnable exitProcess = () -> Runtime.getRuntime().halt(0);
     private static Object powerManager;
     private static Method interactiveMethod;
     private static boolean interactiveNeedsDisplayId;
@@ -118,8 +132,7 @@ public final class PanelServer {
         } catch (Throwable t) {
             emit("log loop " + describe(t));
         } finally {
-            restoreIfNeeded();
-            System.exit(0);
+            restoreAndExit();
         }
     }
 
@@ -237,8 +250,7 @@ public final class PanelServer {
                 SystemClock.sleep(1000);
                 if (!cmdline.equals(readCmdline(pid))) {
                     // Restore the panel first; writing to stdout (broken pipe) may kill the process.
-                    restoreIfNeeded();
-                    System.exit(0);
+                    restoreAndExit();
                 }
             }
         }, "client-watchdog");
@@ -259,13 +271,14 @@ public final class PanelServer {
 
     // ------------------------------------------------------------------ panel power
 
-    private static String setPower(boolean on, String pref) throws Exception {
+    static String setPower(boolean on, String pref) throws Exception {
         synchronized (POWER_LOCK) {
             return setPowerLocked(on, pref);
         }
     }
 
     private static String setPowerLocked(boolean on, String pref) throws Exception {
+        if (!on && exiting) throw new IllegalStateException("exiting");
         if (pref == null || pref.isEmpty()) pref = "auto";
         int mode = on ? POWER_MODE_NORMAL : POWER_MODE_OFF;
         Exception surfaceError = null;
@@ -309,17 +322,21 @@ public final class PanelServer {
     private static String turnOn() throws Exception {
         Boolean interactive = isInteractive();
         synchronized (POWER_LOCK) {
-            if (Boolean.FALSE.equals(interactive)) {
-                // Device is asleep: turning the panel on now would light the screen while the system thinks it is off.
-                // DisplayPowerController restores the panel to normal on wake anyway.
-                panelOff = false;
-                offMethod = "";
-                offTokens = null;
-                return "skipped-asleep";
-            }
-            String method = "dm".equals(offMethod) ? "dm" : "auto";
-            return setPowerLocked(true, method);
+            return turnOnLocked(interactive);
         }
+    }
+
+    private static String turnOnLocked(Boolean interactive) throws Exception {
+        if (Boolean.FALSE.equals(interactive)) {
+            // Device is asleep: turning the panel on now would light the screen while the system thinks it is off.
+            // DisplayPowerController restores the panel to normal on wake anyway.
+            panelOff = false;
+            offMethod = "";
+            offTokens = null;
+            return "skipped-asleep";
+        }
+        String method = "dm".equals(offMethod) ? "dm" : "auto";
+        return setPowerLocked(true, method);
     }
 
     /**
@@ -369,35 +386,49 @@ public final class PanelServer {
         return sec + "s";
     }
 
-    private static void restoreIfNeeded() {
-        // app died / exiting: give the system UI back (the system would also do it once we die)
-        if (systemOff) {
-            try {
-                systemUi(true);
-            } catch (Throwable t) {
-                emit("log restore-system " + describe(t));
+    /**
+     * The way out of the process (client died, stdin closed, "exit"). Holds POWER_LOCK from the check until the
+     * process is gone, so an "off" that is still running finishes first and is undone here, and none can start after.
+     */
+    static void restoreAndExit() {
+        synchronized (POWER_LOCK) {
+            exiting = true;
+            // Give the system UI back (the system would also do it once we die).
+            if (systemOff) {
+                try {
+                    systemUi(true);
+                } catch (Throwable t) {
+                    emit("log restore-system " + describe(t));
+                }
             }
-        }
-        // then turn the panel back on if we turned it off
-        if (!panelOff) return;
-        try {
-            turnOn();
-        } catch (Throwable t) {
-            emit("log restore " + describe(t));
+            // Then turn the panel back on if we turned it off. PM_LOCK is a leaf, so reading the power state while
+            // holding POWER_LOCK is safe, and it is current even if we waited for an "off" above.
+            if (panelOff) {
+                try {
+                    turnOnLocked(isInteractive());
+                } catch (Throwable t) {
+                    emit("log restore " + describe(t));
+                }
+            }
+            exitProcess.run();
         }
     }
 
     private static int surfacePower(List<IBinder> tokens, int mode) throws Exception {
+        for (IBinder token : tokens) {
+            powerModeSetter.set(token, mode);
+        }
+        return tokens.size();
+    }
+
+    private static void setDisplayPowerMode(IBinder token, int mode) throws Exception {
         Method setMode = setPowerModeMethod;
         if (setMode == null) {
             setMode = Class.forName("android.view.SurfaceControl")
                     .getMethod("setDisplayPowerMode", IBinder.class, int.class);
             setPowerModeMethod = setMode;
         }
-        for (IBinder token : tokens) {
-            setMode.invoke(null, token, mode);
-        }
-        return tokens.size();
+        setMode.invoke(null, token, mode);
     }
 
     /**
