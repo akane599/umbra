@@ -15,6 +15,7 @@ class AppSettings(context: Context) {
     val exitShake: Boolean get() = sp.getBoolean(K_EXIT_SHAKE, false)
     val timerMinutes: Int get() = sp.getString(K_TIMER, "0")?.toIntOrNull() ?: 0
     val keepAwake: Boolean get() = sp.getBoolean(K_KEEP_AWAKE, true)
+    val lockOnRestore: Boolean get() = sp.getBoolean(K_LOCK_ON_RESTORE, DEF_LOCK_ON_RESTORE)
     val collapseShade: Boolean get() = sp.getBoolean(K_COLLAPSE, true)
     val holdOff: Boolean get() = sp.getBoolean(K_HOLD, true)
 
@@ -70,6 +71,9 @@ class AppSettings(context: Context) {
         const val K_EXIT_SHAKE = "exit_shake"
         const val K_TIMER = "exit_timer"
         const val K_KEEP_AWAKE = "keep_awake"
+        const val K_LOCK_ON_RESTORE = "lock_on_restore"
+        /** On: only acts when the phone has a secure lock screen (see PanelService.restoreLocks). */
+        const val DEF_LOCK_ON_RESTORE = true
         const val K_COLLAPSE = "collapse_shade"
         const val K_HOLD = "hold_off"
         const val K_SETUP_DONE = "setup_done"

@@ -85,11 +85,14 @@ power. Nothing else changes: touch, brightness and apps behave as usual.
 
 ## Behavior
 
-- **Keep the phone awake** (default on): no screen timeout during a session (up to 12 h). The phone
-  therefore doesn't lock while the panel is off: every way back except the power button (double tap,
-  volume keys, shake, timer) returns to the unlocked phone, so anyone who picks it up can get in. If
-  that matters, end the session with the power button, or turn this off so the phone sleeps and locks
-  on its normal timeout (which also ends the session).
+- **Keep the phone awake** (default on): no screen timeout during a session (up to 12 h), so the
+  phone doesn't lock by itself while the panel is off. Turn this off to let it sleep and lock on its
+  normal timeout (which also ends the session).
+- **Lock when the screen comes back** (default on): if the phone has a PIN, pattern or password,
+  double tap, the volume keys, shake and the timer put it to sleep and wake it straight to the lock
+  screen, like the power button does, instead of returning to the unlocked phone. Whether it locks
+  right away follows the system's "Power button instantly locks" setting. Turn this off to get back
+  to the phone exactly as you left it; then anyone who picks it up while it's dark can get in.
 - **Keep the screen dark** (default on): if the ROM turns the panel back on, it's turned off again
   within 3 s. This is skipped while asleep and for 4 s after a power press.
 - **Privilege source** (Advanced): automatic (Shizuku → root), Shizuku only, root only.

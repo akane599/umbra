@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
  *
  * <pre>
  * args     : [client-pid]  (if given, the panel is restored and the server exits when the client dies)
- * commands : ping | off [auto|surface|dm] | on | release | hold SEC | keys | collapse | wake
+ * commands : ping | off [auto|surface|dm] | on | release | hold SEC | keys | collapse | wake | sleep
  *            | system off|on | grant PACKAGE | diag | exit
  * replies  : "ok COMMAND detail" | "err COMMAND message"
  * events   : "evt combo" (vol+ and vol- together) | "evt power" (power key)
@@ -178,6 +178,12 @@ public final class PanelServer {
                         break;
                     case "wake":
                         emit("ok wake " + run("/system/bin/input", "keyevent", "224"));
+                        break;
+                    case "sleep":
+                        // KEYCODE_SLEEP: the system goes to sleep (and locks) as if the power key was pressed.
+                        int rc = run("/system/bin/input", "keyevent", "223");
+                        if (rc == 0) emit("ok sleep");
+                        else emit("err sleep input exited " + rc);
                         break;
                     case "system":
                         if ("off".equals(arg)) emit("ok system " + systemUi(false));

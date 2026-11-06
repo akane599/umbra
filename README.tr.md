@@ -76,11 +76,13 @@ tutar. Başka hiçbir şey değişmez: dokunma, parlaklık ve uygulamalar her za
 
 ## Davranış ayarları
 
-- **Cihazı uyanık tut** (varsayılan açık): Oturum boyunca (en fazla 12 saat) ekran zaman aşımı uygulanmaz.
-  Bu yüzden panel kapalıyken telefon kilitlenmez: güç tuşu dışındaki her geri dönüş yolu (çift dokunma,
-  ses tuşları, sallama, zamanlayıcı) telefonu kilitsiz açar; telefonu eline alan herkes içeri girebilir.
-  Bu önemliyse oturumu güç tuşuyla bitir ya da bu ayarı kapat; telefon normal zaman aşımında uyur ve
-  kilitlenir (oturum da biter).
+- **Cihazı uyanık tut** (varsayılan açık): Oturum boyunca (en fazla 12 saat) ekran zaman aşımı uygulanmaz;
+  bu yüzden panel kapalıyken telefon kendiliğinden kilitlenmez. Kapatırsan telefon normal zaman aşımında
+  uyur ve kilitlenir (oturum da biter).
+- **Ekran geri gelince kilitle** (varsayılan açık): Telefonda PIN, desen ya da şifre varsa çift dokunma, ses
+  tuşları, sallama ve zamanlayıcı telefonu kilitsiz açmak yerine güç tuşu gibi uyutup doğrudan kilit
+  ekranına uyandırır. Hemen kilitlenip kilitlenmeyeceği sistemin "Güç tuşu anında kilitler" ayarına bağlıdır.
+  Kapatırsan telefon bıraktığın gibi açılır; ekran karanlıkken eline alan herkes içeri girebilir.
 - **Paneli kapalı tut** (varsayılan açık): ROM paneli kendiliğinden açarsa 3 sn içinde yeniden kapatır;
   uykudayken ya da güç tuşuna basıldıktan sonraki 4 sn içinde devreye girmez.
 - **Yetki kaynağı:** Otomatik (Shizuku → root), yalnız Shizuku, yalnız root.

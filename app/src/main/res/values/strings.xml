@@ -86,8 +86,11 @@
     <string name="timer_hour">%d h</string>
 
     <string name="pref_keep_awake">Keep the phone awake</string>
-    <string name="pref_keep_awake_on">No screen timeout; apps keep running at full speed. The phone doesn\'t lock while dark: every way back except the power button returns it unlocked</string>
+    <string name="pref_keep_awake_on">No screen timeout; apps keep running at full speed. The phone doesn\'t lock by itself while dark (see “Lock when the screen comes back”)</string>
     <string name="pref_keep_awake_off">The phone sleeps on timeout and the session ends</string>
+    <string name="pref_lock_on_restore">Lock when the screen comes back</string>
+    <string name="pref_lock_on_restore_on">If the phone has a screen lock, double tap, volume keys, shake and the timer bring back the lock screen, not the unlocked phone</string>
+    <string name="pref_lock_on_restore_off">Double tap, volume keys, shake and the timer return to the phone as you left it, unlocked</string>
     <string name="pref_hold">Keep the screen dark</string>
     <string name="pref_hold_sum">If the system turns the panel back on, it\'s turned off again within 3 s</string>
     <string name="pref_collapse">Close the notification shade first</string>

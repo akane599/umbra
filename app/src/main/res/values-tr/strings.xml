@@ -85,8 +85,11 @@
     <string name="timer_hour">%d sa</string>
 
     <string name="pref_keep_awake">Cihazı uyanık tut</string>
-    <string name="pref_keep_awake_on">Ekran zaman aşımı uygulanmaz; uygulamalar tam hızda çalışır. Ekran karanlıkken telefon kilitlenmez: güç tuşu dışındaki her geri dönüş yolu telefonu kilitsiz açar</string>
+    <string name="pref_keep_awake_on">Ekran zaman aşımı uygulanmaz; uygulamalar tam hızda çalışır. Ekran karanlıkken telefon kendiliğinden kilitlenmez (bkz. “Ekran geri gelince kilitle”)</string>
     <string name="pref_keep_awake_off">Zaman aşımında cihaz uyur ve oturum biter</string>
+    <string name="pref_lock_on_restore">Ekran geri gelince kilitle</string>
+    <string name="pref_lock_on_restore_on">Telefonda ekran kilidi varsa çift dokunma, ses tuşları, sallama ve zamanlayıcı kilitsiz telefon yerine kilit ekranını getirir</string>
+    <string name="pref_lock_on_restore_off">Çift dokunma, ses tuşları, sallama ve zamanlayıcı telefonu bıraktığın gibi, kilitsiz açar</string>
     <string name="pref_hold">Paneli kapalı tut</string>
     <string name="pref_hold_sum">Sistem paneli kendiliğinden açarsa 3 sn içinde yeniden kapatır</string>
     <string name="pref_collapse">Önce bildirim panelini kapat</string>

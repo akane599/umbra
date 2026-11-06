@@ -12,6 +12,7 @@ import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.content.res.Configuration
 import android.annotation.SuppressLint
+import android.app.KeyguardManager
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -77,8 +78,20 @@ class PanelService : Service() {
         }
     }
 
-    private val timerRunnable = Runnable { deactivate(restorePanel = true, reason = "timer") }
+    private val timerRunnable = Runnable { restoreExit("timer") }
     private var showLock: Runnable? = null
+
+    /** Set while a restore exit is putting the phone to sleep so it comes back locked; holds the exit's reason. */
+    private var lockingExit: String? = null
+
+    /** The sleep request didn't put the system to sleep: restore the panel the normal way after all. */
+    private val lockCheck = Runnable {
+        val reason = lockingExit ?: return@Runnable
+        if (state == State.ACTIVE && power.isInteractive) {
+            lockingExit = null
+            deactivate(restorePanel = true, reason = reason)
+        }
+    }
 
     /** Power key was pressed but the system didn't go to sleep: the panel was most likely turned on already. */
     private val powerCheck = Runnable {
@@ -345,14 +358,14 @@ class PanelService : Service() {
         if (settings.exitVolume && keysOk) exits += getString(R.string.exit_short_volume)
         if (settings.exitPower) exits += getString(R.string.exit_short_power)
         if (settings.exitDoubleTap) {
-            val s = TouchShield(this) { main.post { deactivate(restorePanel = true, reason = "double_tap") } }
+            val s = TouchShield(this) { main.post { restoreExit("double_tap") } }
             if (s.show()) {
                 shield = s
                 exits += getString(R.string.exit_short_double_tap)
             }
         }
         if (settings.exitShake) {
-            val d = ShakeDetector(this) { main.post { deactivate(restorePanel = true, reason = "shake") } }
+            val d = ShakeDetector(this) { main.post { restoreExit("shake") } }
             if (d.start()) {
                 shake = d
                 exits += getString(R.string.exit_short_shake)
@@ -400,6 +413,29 @@ class PanelService : Service() {
     // ---------------------------------------------------------------- deactivation
 
     /**
+     * Ends the session from an exit that would bring the panel back (double tap, volume keys, shake, timer). On a
+     * phone with a secure lock screen and "Lock when the screen comes back" on, a panel session instead puts the
+     * system to sleep; [onScreenOff] then wakes it to the lock screen, the same way the power-key exit does. If the
+     * phone doesn't go to sleep, the panel is restored as usual.
+     */
+    private fun restoreExit(reason: String) {
+        val secure = getSystemService(KeyguardManager::class.java)?.isDeviceSecure == true
+        if (state != State.ACTIVE || !restoreLocks(mode, settings.lockOnRestore, secure)) {
+            deactivate(restorePanel = true, reason = reason)
+            return
+        }
+        if (lockingExit != null) return // already on its way to sleep
+        lockingExit = reason
+        val br = bridge
+        worker.post {
+            val slept = br != null && br.alive && runCatching { br.request("sleep") }
+                .onFailure { Log.w(TAG, "sleep failed", it) }.isSuccess
+            if (!slept) onMain { main.removeCallbacks(lockCheck); lockCheck.run() }
+        }
+        main.postDelayed(lockCheck, LOCK_SETTLE_MS)
+    }
+
+    /**
      * @param restorePanel return the panel to the on power mode (while the system is awake).
      * @param wake wake the system (so a single press brings it back if it slept via the power key).
      */
@@ -414,6 +450,8 @@ class PanelService : Service() {
         setState(State.STOPPING)
         main.removeCallbacks(timerRunnable)
         main.removeCallbacks(powerCheck)
+        main.removeCallbacks(lockCheck)
+        lockingExit = null
         showLock?.let { main.removeCallbacks(it) }
         showLock = null
         shield?.hide()
@@ -510,7 +548,7 @@ class PanelService : Service() {
     private fun onBridgeEvent(evt: String) {
         if (state != State.ACTIVE) return
         when (evt) {
-            "combo" -> if (mode == Mode.LOCK || settings.exitVolume) deactivate(restorePanel = true, reason = "volume")
+            "combo" -> if (mode == Mode.LOCK || settings.exitVolume) restoreExit("volume")
             "power" -> if (mode == Mode.PANEL) {
                 powerPressedAt = SystemClock.elapsedRealtime()
                 main.removeCallbacks(powerCheck)
@@ -527,6 +565,13 @@ class PanelService : Service() {
             return
         }
         main.removeCallbacks(powerCheck)
+        main.removeCallbacks(lockCheck)
+        val locking = lockingExit
+        if (locking != null) {
+            // We put it to sleep for a restore exit: wake it straight to the lock screen.
+            deactivate(restorePanel = false, wake = true, reason = locking)
+            return
+        }
         // System went to sleep. DisplayPowerController owns the panel now; sending "on" while
         // asleep would light it, so only wake the device (if it was the power key).
         val recentPower = SystemClock.elapsedRealtime() - powerPressedAt < 3000
@@ -721,6 +766,7 @@ class PanelService : Service() {
         private const val CHANNEL = "panel"
         private const val NOTIF_ID = 1
         private const val POWER_SETTLE_MS = 1500L
+        private const val LOCK_SETTLE_MS = 2000L
         private const val HOLD_INTERVAL_S = 3
 
         @Volatile
@@ -753,6 +799,10 @@ class PanelService : Service() {
             State.STARTING -> if (requested != current) StartAction.QUEUE else StartAction.CANCEL_PENDING
             State.STOPPING -> StartAction.QUEUE
         }
+
+        /** Whether a panel session's double tap / volume / shake / timer exit locks the phone instead of restoring. */
+        fun restoreLocks(mode: Mode, lockOnRestore: Boolean, deviceSecure: Boolean): Boolean =
+            mode == Mode.PANEL && lockOnRestore && deviceSecure
 
         private fun modeFor(action: String?): Mode? = when (action) {
             ACTION_OFF, ACTION_TOGGLE -> Mode.PANEL

@@ -574,6 +574,10 @@ class MainActivity : AppCompatActivity() {
             box, R.drawable.ic_awake, R.string.pref_keep_awake, AppSettings.K_KEEP_AWAKE, true,
             on = R.string.pref_keep_awake_on, off = R.string.pref_keep_awake_off,
         )
+        switchRow(
+            box, R.drawable.ic_shield, R.string.pref_lock_on_restore, AppSettings.K_LOCK_ON_RESTORE,
+            AppSettings.DEF_LOCK_ON_RESTORE, on = R.string.pref_lock_on_restore_on, off = R.string.pref_lock_on_restore_off,
+        )
         switchRow(box, R.drawable.ic_lock, R.string.pref_hold, AppSettings.K_HOLD, true, on = R.string.pref_hold_sum)
         switchRow(
             box, R.drawable.ic_collapse, R.string.pref_collapse, AppSettings.K_COLLAPSE, true,
