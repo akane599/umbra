@@ -103,8 +103,8 @@
     <string name="pref_diag_sum">Shows which power-off paths and key devices work</string>
 
     <string name="pref_external">Commands from other apps</string>
-    <string name="pref_external_on">Tasker and others can turn the screen off. Disable to accept only “on”.</string>
-    <string name="pref_external_off">Only “on” (ON) is accepted; shortcuts and the tile are unaffected</string>
+    <string name="pref_external_on">Any app (Tasker and others) can turn the screen off, start touch lock or keep the screen on. Disable to accept only “on” and “stop”.</string>
+    <string name="pref_external_off">Only “on” and “stop” (ON, STOP) are accepted; shortcuts and the tiles are unaffected</string>
     <string name="automation_hint">Tasker → Send Intent → Target: Activity\nPackage io.github.akane599.umbra · Class …ActionActivity\n(The broadcast receiver works too: …CommandReceiver)\nSTOP ends any session; ON also recovers a stuck panel.</string>
     <string name="copy_action">Copy %s action</string>
 
