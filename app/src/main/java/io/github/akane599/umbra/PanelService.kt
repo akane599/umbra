@@ -68,6 +68,8 @@ class PanelService : Service() {
     private var methodInfo = ""
     private var exitSummary = ""
     private var lastOrientation = Configuration.ORIENTATION_UNDEFINED
+    /** startId of the newest command delivered; see [finishService]. */
+    private var lastStartId = 0
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -96,6 +98,7 @@ class PanelService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        lastStartId = startId
         val action = intent?.action
         // So the first notification already speaks for the mode being started.
         if (state == State.IDLE) modeFor(action)?.let { mode = it }
@@ -569,7 +572,9 @@ class PanelService : Service() {
 
     private fun finishService() {
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        // Stops only if no newer command is on its way: one the system has already accepted keeps the service
+        // alive, and its onStartCommand goes foreground again and handles it.
+        stopSelfResult(lastStartId)
     }
 
     override fun onDestroy() {
