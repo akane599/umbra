@@ -83,7 +83,7 @@ class PrivilegedBridge(
             // With su implementations that elevate in place (e.g. KernelSU), the process stays in the app's cgroup;
             // when the system kills the app (killProcessGroup) it would kill the server too and leave the panel
             // off. Moving to the root cgroup prevents that; if it fails, we silently carry on.
-            Backend.ROOT -> ProcessBuilder("su", "-c", "echo \$\$ > /sys/fs/cgroup/cgroup.procs 2>/dev/null; $cmd").start()
+            Backend.ROOT -> launchSu("echo \$\$ > /sys/fs/cgroup/cgroup.procs 2>/dev/null; $cmd")
         }
         attach(p)
     }
@@ -223,6 +223,17 @@ class PrivilegedBridge(
         const val ERR_SHIZUKU_NOT_RUNNING = "Shizuku is not running"
         const val ERR_SHIZUKU_NO_PERMISSION = "Shizuku permission not granted"
         const val ERR_SERVER_NOT_STARTED = "server did not start"
+        const val ERR_NO_SU = "su not found"
+
+        /**
+         * Runs [script] through su. A missing su (no root, or KernelSU hiding it from apps it hasn't granted) fails
+         * here, before any helper output exists, so it gets its own marker. [su] is only overridden by tests.
+         */
+        internal fun launchSu(script: String, su: String = "su"): Process = try {
+            ProcessBuilder(su, "-c", script).start()
+        } catch (e: IOException) {
+            throw IllegalStateException("$ERR_NO_SU (${e.message})", e)
+        }
 
         enum class ShizukuState { NOT_RUNNING, NO_PERMISSION, READY, TOO_OLD }
 

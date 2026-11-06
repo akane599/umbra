@@ -28,7 +28,7 @@ enum class ActivationError(
                 PrivilegedBridge.ERR_SHIZUKU_NOT_RUNNING in raw && privilegeMode == "shizuku" -> SHIZUKU_OFF
                 // Auto: no Shizuku, and root is missing/denied → the likeliest fix is starting Shizuku.
                 PrivilegedBridge.ERR_SHIZUKU_NOT_RUNNING in raw && root != null &&
-                    PrivilegedBridge.ERR_SERVER_NOT_STARTED in root -> SHIZUKU_OFF
+                    (PrivilegedBridge.ERR_SERVER_NOT_STARTED in root || PrivilegedBridge.ERR_NO_SU in root) -> SHIZUKU_OFF
                 else -> GENERIC
             }
         }
