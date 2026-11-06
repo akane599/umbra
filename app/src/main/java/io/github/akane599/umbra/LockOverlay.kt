@@ -2,7 +2,6 @@ package io.github.akane599.umbra
 
 import android.content.Context
 import android.graphics.PixelFormat
-import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import android.view.WindowManager
@@ -43,16 +42,8 @@ class LockOverlay(private val context: Context, private val onUnlock: () -> Unit
             title = "Umbra touch lock"
             softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or
                 WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING
-            layoutInDisplayCutoutMode = if (Build.VERSION.SDK_INT >= 30) {
-                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-            } else {
-                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-            }
-            if (Build.VERSION.SDK_INT >= 30) {
-                // Cover the status and navigation bar areas too, so the scrim and touch catch reach the edges.
-                fitInsetsTypes = 0
-                fitInsetsSides = 0
-            }
+            // The scrim and the touch catch reach the edges, status and navigation bar areas included.
+            coverWholeDisplay()
         }
         v.onKeyboardVisible = { takeFocus(v, lp) }
         return try {

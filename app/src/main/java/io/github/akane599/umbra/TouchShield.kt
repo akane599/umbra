@@ -3,7 +3,6 @@ package io.github.akane599.umbra
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.PixelFormat
-import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import android.view.GestureDetector
@@ -52,11 +51,9 @@ class TouchShield(private val context: Context, private val onDoubleTap: () -> U
             PixelFormat.TRANSLUCENT,
         ).apply {
             title = "Umbra touch shield"
-            layoutInDisplayCutoutMode = if (Build.VERSION.SDK_INT >= 30) {
-                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-            } else {
-                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-            }
+            // No FLAG_ALT_FOCUSABLE_IM here (unlike the lock): with FLAG_NOT_FOCUSABLE it would make this window
+            // the keyboard's layering target and lift an open keyboard above the shield.
+            coverWholeDisplay()
         }
         return try {
             wm.addView(v, lp)
