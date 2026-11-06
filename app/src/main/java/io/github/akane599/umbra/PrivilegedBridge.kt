@@ -14,6 +14,25 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
+/** The part of [PrivilegedBridge] that [oneShot] uses; lets tests check its cleanup without a real helper. */
+interface Helper {
+    fun start(pref: String): PrivilegedBridge.Backend
+    fun request(command: String, timeoutMs: Long = 6000): String
+    fun stop()
+}
+
+/**
+ * Starts a temporary helper, sends [command] and returns the reply. The helper is stopped in every case: one left
+ * running after a failed command would keep a shell/root process alive, since its reader threads hold it.
+ */
+@WorkerThread
+fun Helper.oneShot(pref: String, command: String): String = try {
+    start(pref)
+    request(command)
+} finally {
+    stop()
+}
+
 /**
  * Launches the privileged [PanelServer] process via Shizuku or root (su) and talks
  * to it over a line-based protocol. All blocking calls must be made from a
@@ -23,7 +42,7 @@ class PrivilegedBridge(
     private val context: Context,
     private val onEvent: (String) -> Unit = {},
     private val onDeath: () -> Unit = {},
-) {
+) : Helper {
 
     enum class Backend(val label: String) { SHIZUKU("Shizuku"), ROOT("Root") }
 
@@ -43,7 +62,7 @@ class PrivilegedBridge(
 
     /** [pref]: "auto" | "shizuku" | "root". On failure, throws an exception listing the reasons. */
     @WorkerThread
-    fun start(pref: String): Backend {
+    override fun start(pref: String): Backend {
         val order = when (pref) {
             "shizuku" -> listOf(Backend.SHIZUKU)
             "root" -> listOf(Backend.ROOT)
@@ -152,7 +171,7 @@ class PrivilegedBridge(
      */
     @WorkerThread
     @Synchronized
-    fun request(command: String, timeoutMs: Long = 6000): String {
+    override fun request(command: String, timeoutMs: Long): String {
         val name = command.substringBefore(' ')
         if (!alive) throw IOException("server not running")
         responses.clear()
@@ -184,7 +203,7 @@ class PrivilegedBridge(
     }
 
     /** Tells the server to exit; if the panel is still off and the device is awake, the server turns it back on. */
-    fun stop() {
+    override fun stop() {
         stopping = true
         val p = process ?: return
         process = null

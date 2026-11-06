@@ -424,13 +424,8 @@ class PanelService : Service() {
                 val ok = br != null && br.alive && runCatching { br.request("on") }.isSuccess
                 if (!ok) {
                     // The server may have died: retry with a fresh one.
-                    runCatching {
-                        newBridge().apply {
-                            start(privilege)
-                            request("on")
-                            stop()
-                        }
-                    }.onFailure { Log.e(TAG, "failed to restore panel", it) }
+                    runCatching { newBridge().oneShot(privilege, "on") }
+                        .onFailure { Log.e(TAG, "failed to restore panel", it) }
                 }
             }
             if (wake) runCatching { br?.request("wake") }
@@ -458,13 +453,7 @@ class PanelService : Service() {
         setState(State.STOPPING)
         val privilege = settings.privilegeMode
         worker.post {
-            runCatching {
-                newBridge().apply {
-                    start(privilege)
-                    request("on")
-                    stop()
-                }
-            }.onFailure { Log.w(TAG, "forceOn", it) }
+            runCatching { newBridge().oneShot(privilege, "on") }.onFailure { Log.w(TAG, "forceOn", it) }
             onMain {
                 setState(State.IDLE)
                 finishService()
