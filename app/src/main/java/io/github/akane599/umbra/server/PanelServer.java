@@ -749,16 +749,22 @@ public final class PanelServer {
         return ok + "/" + total;
     }
 
+    private static final long RUN_TIMEOUT_MS = 8000;
+
     private static int run(String... argv) throws Exception {
-        Process p = new ProcessBuilder(argv).redirectErrorStream(true).start();
+        return run(RUN_TIMEOUT_MS, argv);
+    }
+
+    /** Runs a tool and returns its exit code, or -1 if it didn't finish within {@code timeoutMs}. */
+    static int run(long timeoutMs, String... argv) throws Exception {
+        // The output isn't used. Sending it to /dev/null rather than a pipe we'd have to drain means neither the tool
+        // nor a child it leaves behind can hold us up, so the timeout really bounds the call.
+        Process p = new ProcessBuilder(argv).redirectErrorStream(true)
+                .redirectOutput(new File("/dev/null"))
+                .start();
         p.getOutputStream().close();
-        InputStream out = p.getInputStream();
-        byte[] tmp = new byte[4096];
-        //noinspection StatementWithEmptyBody
-        while (out.read(tmp) >= 0) {
-        }
-        if (!p.waitFor(8, TimeUnit.SECONDS)) {
-            p.destroy();
+        if (!p.waitFor(timeoutMs, TimeUnit.MILLISECONDS)) {
+            p.destroyForcibly();
             return -1;
         }
         return p.exitValue();
