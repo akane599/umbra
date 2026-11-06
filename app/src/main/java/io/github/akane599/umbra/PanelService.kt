@@ -57,7 +57,7 @@ class PanelService : Service() {
     private var lock: LockOverlay? = null
     /** Set on the worker thread once the server has turned off the shade and navigation. */
     @Volatile private var systemBlocked = false
-    /** A different mode was requested while a session was running; started once the current one ends. */
+    /** The newest start request that arrived mid-session or mid-transition; run once the current session ends. */
     private var pending: Pair<Mode, String>? = null
     private var shake: ShakeDetector? = null
     private var screenReceiverRegistered = false
@@ -110,14 +110,20 @@ class PanelService : Service() {
             ACTION_LOCK -> start(Mode.LOCK, source)
             ACTION_AWAKE -> start(Mode.AWAKE, source)
             ACTION_ON, ACTION_STOP -> when (state) {
-                State.ACTIVE, State.STARTING -> deactivate(restorePanel = true, reason = source)
+                State.ACTIVE, State.STARTING -> {
+                    pending = null
+                    deactivate(restorePanel = true, reason = source)
+                }
                 State.IDLE -> if (action == ACTION_ON) forceOn() else finishService()
                 // Mid-switch: an explicit stop cancels the mode that was about to start.
                 State.STOPPING -> pending = null
             }
             ACTION_TOGGLE -> when {
                 state == State.IDLE -> start(Mode.PANEL, source)
-                mode == Mode.PANEL && state != State.STOPPING -> deactivate(restorePanel = true, reason = source)
+                mode == Mode.PANEL && state != State.STOPPING -> {
+                    pending = null
+                    deactivate(restorePanel = true, reason = source)
+                }
                 else -> start(Mode.PANEL, source)
             }
             else -> if (state == State.IDLE) finishService()
@@ -128,14 +134,16 @@ class PanelService : Service() {
     // ---------------------------------------------------------------- activation
 
     private fun start(m: Mode, source: String) {
-        when {
-            state == State.IDLE -> activate(m, source)
-            state == State.ACTIVE && mode != m -> {
+        when (startAction(state, mode, m)) {
+            StartAction.ACTIVATE -> activate(m, source)
+            StartAction.SWITCH -> {
                 // Switch in place: end the current session, then start the requested one.
                 pending = m to source
                 deactivate(restorePanel = true, reason = "switch")
             }
-            else -> Unit // already running in this mode, or mid-transition
+            StartAction.QUEUE -> pending = m to source
+            StartAction.CANCEL_PENDING -> pending = null
+            StartAction.IGNORE -> Unit
         }
     }
 
@@ -304,6 +312,7 @@ class PanelService : Service() {
         acquireWakeLock(timeoutMs = null)
         registerScreenReceiver()
         updateNotification()
+        switchToPending()
     }
 
     private fun toast(res: Int) = Toast.makeText(applicationContext, res, Toast.LENGTH_LONG).show()
@@ -357,6 +366,17 @@ class PanelService : Service() {
         exits += getString(R.string.exit_short_tile)
         exitSummary = exits.joinToString(" · ")
         updateNotification()
+        switchToPending()
+    }
+
+    /** Another mode was requested while this session was starting: switch to it now that it's up. */
+    private fun switchToPending() {
+        val next = pending ?: return
+        if (next.first == mode) {
+            pending = null
+            return
+        }
+        deactivate(restorePanel = true, reason = "switch")
     }
 
     private fun onActivationFailed(t: Throwable) {
@@ -371,7 +391,10 @@ class PanelService : Service() {
         val msg = if (kind == ActivationError.GENERIC) getString(kind.title)
         else getString(R.string.error_toast, getString(kind.title))
         Toast.makeText(applicationContext, msg, Toast.LENGTH_LONG).show()
-        finishService()
+        // A mode requested while this one was starting still runs.
+        val next = pending
+        pending = null
+        if (next != null) activate(next.first, next.second) else finishService()
     }
 
     // ---------------------------------------------------------------- deactivation
@@ -457,10 +480,8 @@ class PanelService : Service() {
         val privilege = settings.privilegeMode
         worker.post {
             runCatching { newBridge().oneShot(privilege, "on") }.onFailure { Log.w(TAG, "forceOn", it) }
-            onMain {
-                setState(State.IDLE)
-                finishService()
-            }
+            // endSession also starts a mode requested while this ran.
+            onMain { endSession() }
         }
     }
 
@@ -719,6 +740,19 @@ class PanelService : Service() {
         val isActive: Boolean get() = state == State.ACTIVE || state == State.STARTING
 
         fun isActive(m: Mode): Boolean = isActive && mode == m
+
+        /** What a start request (OFF, LOCK, AWAKE, or TOGGLE that starts) does; see [start]. */
+        enum class StartAction { ACTIVATE, SWITCH, QUEUE, CANCEL_PENDING, IGNORE }
+
+        /** Pure, so the transitions can be unit-tested. [current] is the mode running, starting or stopping. */
+        fun startAction(state: State, current: Mode, requested: Mode): StartAction = when (state) {
+            State.IDLE -> StartAction.ACTIVATE
+            State.ACTIVE -> if (requested != current) StartAction.SWITCH else StartAction.IGNORE
+            // Mid-transition, the newest request wins: it runs once the transition is over (or, for the mode
+            // already starting, replaces whatever was queued before it).
+            State.STARTING -> if (requested != current) StartAction.QUEUE else StartAction.CANCEL_PENDING
+            State.STOPPING -> StartAction.QUEUE
+        }
 
         private fun modeFor(action: String?): Mode? = when (action) {
             ACTION_OFF, ACTION_TOGGLE -> Mode.PANEL
