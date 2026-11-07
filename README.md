@@ -64,7 +64,10 @@ failed.
   overlay, so it would stay usable, and with it open the navigation bar brings back its "hide
   keyboard" and keyboard-switcher buttons even while navigation is disabled. Only then does the lock
   take key focus; otherwise the app underneath keeps it.
-- **Dim the screen**: off, soft, dim or dark scrim over the content.
+- **Dim the screen**: off, soft, dim or dark scrim over the content. The status bar is drawn above
+  any app, so with Shizuku/root the helper also hides its clock and icons while a dimmed lock is on;
+  they come back when it ends. The 3-button navigation bar stays as it is unless "Block system
+  gestures too" hides it.
 - **Show the lock**: a faint badge near the bottom edge (it drifts a few pixels now and then against
   OLED burn-in). When off, the badge appears only when you touch the screen.
 - **Unlock**: hold the lock for about a second (a ring fills, the shackle opens). With Shizuku/root,
@@ -76,6 +79,17 @@ failed.
   settings or heads-up pop-ups, and no home, back or recents. Touch itself keeps working, so the hold
   still unlocks. These flags are tied to the helper process: if it dies for any reason, Android drops
   them by itself, so a crash can't leave the phone stuck.
+- **Touches from adb, scrcpy and other tools** (Shizuku or root, Android 14+): `adb shell input tap`
+  and other injected touches reach the app underneath; touches on the screen stay blocked. The lock
+  can't hand on a touch it caught, so it records the injected gesture and, once it ends, the helper
+  replays it through holes of a few pixels opened where its fingers go down, so each one arrives
+  about 0.1 s after it ends. Android drops a touch that goes through another app's window more than
+  80% opaque, so the lock window stays slightly see-through for the whole session and draws brighter
+  to make up for it: it looks the same, except the darkest dim, which stops at 78% instead of 88%.
+  Nothing on screen changes when a touch is replayed. Injected gestures never show the badge or
+  unlock. Give back-to-back commands a moment apart: Android takes one injected touch at a time, so a
+  replay waits for an injected touch still coming in, and past 16 waiting gestures new ones are
+  dropped.
 - Start it from the app, the **Touch lock** QS tile or the launcher shortcut.
 
 ## Stay awake

@@ -23,6 +23,7 @@ import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -57,8 +58,11 @@ class PanelService : Service() {
     private lateinit var screenTimeout: ScreenTimeout
     private var shield: TouchShield? = null
     private var lock: LockOverlay? = null
+    private var relay: TouchRelay? = null
     /** Set on the worker thread once the server has turned off the shade and navigation. */
     @Volatile private var systemBlocked = false
+    /** Set on the worker thread once the server has emptied the status bar, which stays bright above a dimmed lock. */
+    @Volatile private var statusQuiet = false
     /** The newest start request that arrived mid-session or mid-transition; run once the current session ends. */
     private var pending: Pair<Mode, String>? = null
     private var shake: ShakeDetector? = null
@@ -261,8 +265,11 @@ class PanelService : Service() {
         setState(State.STARTING)
         keysOk = false
         systemBlocked = false
+        statusQuiet = false
         val privilege = settings.privilegeMode
         val full = settings.lockFull
+        // The status bar is drawn above any overlay, so its clock and icons would stay bright over the dim.
+        val quiet = settings.lockDim > 0
         val overlayOk = Settings.canDrawOverlays(this)
         // The helper is optional for touch lock (it adds the volume combo and full lock), so skip it
         // when it can't possibly start rather than waiting on a doomed attempt.
@@ -309,10 +316,13 @@ class PanelService : Service() {
                 }
             }
             keysOk = runCatching { br.request("keys") }.isSuccess
-            if (full && live()) {
-                runCatching { br.request("collapse") }
-                systemBlocked = runCatching { br.request("system off") }
-                    .onFailure { Log.w(TAG, "system off failed", it) }.isSuccess
+            if ((full || quiet) && live()) {
+                if (full) runCatching { br.request("collapse") }
+                val flags = listOfNotNull("off".takeIf { full }, "quiet".takeIf { quiet }).joinToString(" ")
+                val ok = runCatching { br.request("system $flags") }
+                    .onFailure { Log.w(TAG, "system $flags failed", it) }.isSuccess
+                systemBlocked = full && ok
+                statusQuiet = quiet && ok
             }
             if (!live()) {
                 // Nobody is left to unlock: the server restores the system UI as it exits.
@@ -339,6 +349,11 @@ class PanelService : Service() {
             return
         }
         val overlay = LockOverlay(this) { main.post { deactivate(restorePanel = false, reason = "hold") } }
+        if (Build.VERSION.SDK_INT >= 34) {
+            val r = newRelay(overlay)
+            overlay.onInjectedTouch = { e -> e.toSamples().forEach { r.onInjected(e.source, it) } }
+            relay = r
+        }
         val dim = settings.lockDim / 100f
         if (!overlay.show(dim, settings.lockBadge)) {
             settings.recordError(ActivationError.OVERLAY, "overlay permission missing")
@@ -354,6 +369,25 @@ class PanelService : Service() {
         updateNotification()
         switchToPending()
     }
+
+    /** Lets injected touches through the lock; the helper replays them, so without one they stay blocked. */
+    @RequiresApi(34)
+    private fun newRelay(overlay: LockOverlay) = TouchRelay(object : TouchRelay.Port {
+        override fun canReplay() = bridge?.alive == true
+        override fun openHoles(points: List<TouchRelay.Pointer>) = overlay.openHoles(points)
+        override fun closeHoles() = overlay.closeHoles()
+        override fun replay(gesture: String, onQueued: (Boolean) -> Unit) {
+            worker.post {
+                val ok = runCatching { (bridge ?: error("no helper")).request("inject $gesture") }
+                    .onFailure { Log.w(TAG, "inject: ${it.message}") }.isSuccess
+                onMain { onQueued(ok) }
+            }
+        }
+        override fun postDelayed(r: Runnable, delayMs: Long) {
+            main.postDelayed(r, delayMs)
+        }
+        override fun cancel(r: Runnable) = main.removeCallbacks(r)
+    })
 
     private fun toast(res: Int) = Toast.makeText(applicationContext, res, Toast.LENGTH_LONG).show()
 
@@ -485,6 +519,8 @@ class PanelService : Service() {
         shield = null
         shake?.stop()
         shake = null
+        relay?.stop()
+        relay = null
         lock?.dismiss()
         lock = null
         generation++
@@ -496,10 +532,11 @@ class PanelService : Service() {
             unregisterScreenReceiver()
             worker.post {
                 val br = bridge
-                if (systemBlocked) {
+                if (systemBlocked || statusQuiet) {
                     // Normally the live server restores it; if that server is gone, so are its flags.
                     if (br != null && br.alive) runCatching { br.request("system on") }
                     systemBlocked = false
+                    statusQuiet = false
                 }
                 br?.stop()
                 bridge = null
@@ -566,6 +603,7 @@ class PanelService : Service() {
                 keysOk = false
                 bridge = null
                 systemBlocked = false
+                statusQuiet = false
                 updateNotification()
             }
             Mode.AWAKE -> Unit
@@ -688,6 +726,8 @@ class PanelService : Service() {
         if (state == State.ACTIVE || state == State.STARTING) {
             shield?.hide()
             shake?.stop()
+            relay?.stop()
+            relay = null
             lock?.hideNow()
             lock = null
             unregisterScreenReceiver()

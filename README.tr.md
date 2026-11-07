@@ -55,7 +55,10 @@ uyanışta sistem paneli kendisi açar.
   kullanılabilir kalırdı; üstelik klavye açıkken gezinme çubuğu, gezinme kapalı olsa bile "klavyeyi
   gizle" ve klavye değiştirme düğmelerini geri getirir. Kilit yalnızca bu durumda tuş odağını alır;
   yoksa odak alttaki uygulamada kalır.
-- **Ekranı loşlaştır:** içeriğin üzerine yok / hafif / loş / koyu bir perde.
+- **Ekranı loşlaştır:** içeriğin üzerine yok / hafif / loş / koyu bir perde. Durum çubuğu her
+  uygulamanın üstünde çizildiği için Shizuku/root varsa yardımcı süreç, loş kilit açıkken saatini ve
+  simgelerini de gizler; kilit bitince geri gelirler. 3 düğmeli gezinme çubuğu, "Sistem hareketlerini
+  de engelle" onu gizlemedikçe olduğu gibi kalır.
 - **Kilidi göster:** alt kenarda soluk bir rozet (OLED yanmasına karşı arada bir birkaç piksel kayar).
   Kapalıysa rozet yalnızca ekrana dokununca görünür.
 - **Açma:** kilide yaklaşık bir saniye basılı tut (halka dolar, kilit açılır). Shizuku/root varsa Ses+ ve
@@ -67,6 +70,17 @@ uyanışta sistem paneli kendisi açar.
   bildirim paneli, hızlı ayarlar, açılır bildirimler, ana ekran, geri ve son uygulamalar kapanır. Dokunma
   çalışmaya devam ettiği için basılı tutmak yine açar. Kısıtlamalar yardımcı sürece bağlıdır; süreç
   herhangi bir nedenle ölürse Android onları kendisi kaldırır, yani bir çökme telefonu kilitli bırakamaz.
+- **adb, scrcpy ve benzeri araçlardan gelen dokunuşlar** (Shizuku veya root, Android 14+):
+  `adb shell input tap` ve benzeri enjekte edilen dokunuşlar alttaki uygulamaya ulaşır; ekrandaki
+  dokunuşlar engelli kalır. Kilit yakaladığı bir dokunuşu başkasına aktaramaz; bu yüzden enjekte edilen
+  hareketi kaydeder ve hareket bitince yardımcı süreç onu, parmaklarının değdiği noktalarda açılan birkaç
+  piksellik deliklerden yeniden oynatır; bu yüzden her hareket bittikten yaklaşık 0,1 sn sonra ulaşır. Android, başka
+  bir uygulamanın %80'den opak penceresinden geçen dokunuşu düşürdüğü için kilit penceresi oturum boyunca
+  biraz saydam kalır ve bunu telafi etmek için daha parlak çizer: görünüm aynıdır, yalnızca en koyu
+  loşluk %88 yerine %78'de kalır. Bir dokunuş yeniden oynatılırken ekranda hiçbir şey değişmez.
+  Enjekte edilen hareketler rozeti göstermez ve kilidi açmaz. Art arda komutlar arasında kısa bir ara
+  bırakın: Android aynı anda tek bir enjekte dokunuş kabul eder; bu yüzden yeniden oynatma, gelmekte olan
+  enjekte dokunuşun bitmesini bekler ve sırada 16 hareket varken gelen yenileri düşer.
 - Uygulamadan, **Dokunma kilidi** QS kutucuğundan ya da başlatıcı kısayolundan başlatılır.
 
 ## Uyanık tut

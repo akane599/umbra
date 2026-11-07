@@ -5,6 +5,8 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.SystemClock;
+import android.view.InputEvent;
+import android.view.MotionEvent;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -23,6 +25,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -33,7 +37,7 @@ import java.util.concurrent.TimeUnit;
  * <pre>
  * args     : [client-pid]  (if given, the panel is restored and the server exits when the client dies)
  * commands : ping | off [auto|surface|dm] | on | release | hold SEC | keys | collapse | wake | sleep
- *            | system off|on | grant PACKAGE | diag | exit
+ *            | system on|off|quiet|off quiet | inject GESTURE | grant PACKAGE | diag | exit
  * replies  : "ok COMMAND detail" | "err COMMAND message"
  * events   : "evt combo" (vol+ and vol- together) | "evt power" (power key)
  * </pre>
@@ -99,18 +103,28 @@ public final class PanelServer {
     private static int keyDeviceCount;
     private static boolean volUp, volDown, comboFired;
 
-    // StatusBarManager.DISABLE_* / DISABLE2_*: what "system off" turns off while touch lock is on.
+    // StatusBarManager.DISABLE_* / DISABLE2_*: what "system off" (full lock) and "system quiet" (dimmed lock) turn
+    // off while touch lock is on.
     private static final int DISABLE_EXPAND = 0x00010000;
+    private static final int DISABLE_NOTIFICATION_ICONS = 0x00020000;
     private static final int DISABLE_NOTIFICATION_ALERTS = 0x00040000;
+    private static final int DISABLE_SYSTEM_INFO = 0x00100000;
     private static final int DISABLE_HOME = 0x00200000;
     private static final int DISABLE_BACK = 0x00400000;
+    private static final int DISABLE_CLOCK = 0x00800000;
     private static final int DISABLE_RECENT = 0x01000000;
     private static final int DISABLE_SEARCH = 0x02000000;
+    private static final int DISABLE_ONGOING_CALL_CHIP = 0x04000000;
     private static final int DISABLE2_QUICK_SETTINGS = 1;
+    private static final int DISABLE2_SYSTEM_ICONS = 1 << 1;
     private static final int DISABLE2_NOTIFICATION_SHADE = 1 << 2;
     private static final int LOCK_DISABLE = DISABLE_EXPAND | DISABLE_NOTIFICATION_ALERTS | DISABLE_HOME
             | DISABLE_BACK | DISABLE_RECENT | DISABLE_SEARCH;
     private static final int LOCK_DISABLE2 = DISABLE2_QUICK_SETTINGS | DISABLE2_NOTIFICATION_SHADE;
+    /** Empties the status bar, which sits above any overlay and would stay bright over a dimmed lock. */
+    private static final int QUIET_DISABLE = DISABLE_NOTIFICATION_ICONS | DISABLE_SYSTEM_INFO | DISABLE_CLOCK
+            | DISABLE_ONGOING_CALL_CHIP;
+    private static final int QUIET_DISABLE2 = DISABLE2_SYSTEM_ICONS;
 
     /**
      * Identifies our disable request to StatusBarManagerService, which links to its death: if this
@@ -186,12 +200,13 @@ public final class PanelServer {
                         else emit("err sleep input exited " + rc);
                         break;
                     case "system":
-                        if ("off".equals(arg)) emit("ok system " + systemUi(false));
-                        else if ("on".equals(arg)) emit("ok system " + systemUi(true));
-                        else emit("err system expected off|on");
+                        emit("ok system " + systemUi(systemFlags(arg)));
                         break;
                     case "grant":
                         emit("ok grant " + grant(arg));
+                        break;
+                    case "inject":
+                        emit("ok inject " + inject(arg));
                         break;
                     case "diag":
                         emit("ok diag " + diag());
@@ -402,7 +417,7 @@ public final class PanelServer {
             // Give the system UI back (the system would also do it once we die).
             if (systemOff) {
                 try {
-                    systemUi(true);
+                    systemUi(new int[] {0, 0});
                 } catch (Throwable t) {
                     emit("log restore-system " + describe(t));
                 }
@@ -416,6 +431,7 @@ public final class PanelServer {
                     emit("log restore " + describe(t));
                 }
             }
+            endInjection();
             exitProcess.run();
         }
     }
@@ -732,23 +748,45 @@ public final class PanelServer {
     // ------------------------------------------------------------------ system UI (touch lock)
 
     /**
-     * Turns off the notification shade, quick settings, heads-up alerts and the home / back /
-     * recents navigation (buttons and gestures), the same flags kiosk and setup screens use. Touch
-     * keeps working, so the lock's own hold-to-unlock still does; the power key is never affected.
-     * Needs STATUS_BAR, which shell (Shizuku) and root both hold.
+     * The disable flags for a "system" command: "on" clears them all; "off" (full lock) turns off the notification
+     * shade, quick settings, heads-up alerts and the home / back / recents navigation (buttons and gestures), the
+     * same flags kiosk and setup screens use; "quiet" (dimmed lock) hides the clock and the status bar icons. "off" and
+     * "quiet" combine. Returns {disable, disable2}.
      */
-    private static synchronized String systemUi(boolean enable) throws Exception {
+    static int[] systemFlags(String arg) {
+        String[] words = arg.trim().split(" +");
+        if (words.length == 1 && "on".equals(words[0])) return new int[] {0, 0};
+        int what = 0;
+        int what2 = 0;
+        for (String w : words) {
+            if ("off".equals(w)) {
+                what |= LOCK_DISABLE;
+                what2 |= LOCK_DISABLE2;
+            } else if ("quiet".equals(w)) {
+                what |= QUIET_DISABLE;
+                what2 |= QUIET_DISABLE2;
+            } else {
+                throw new IllegalArgumentException("expected on, or off and/or quiet");
+            }
+        }
+        return new int[] {what, what2};
+    }
+
+    /**
+     * Sets the status bar disable flags ({@link #systemFlags}). Touch keeps working, so the lock's own hold-to-unlock
+     * still does; the power key is never affected. Needs STATUS_BAR, which shell (Shizuku) and root both hold.
+     */
+    private static synchronized String systemUi(int[] flags) throws Exception {
+        boolean enable = flags[0] == 0 && flags[1] == 0;
         Object sb = statusBar();
-        int what = enable ? 0 : LOCK_DISABLE;
-        int what2 = enable ? 0 : LOCK_DISABLE2;
         sb.getClass().getMethod("disable", int.class, IBinder.class, String.class)
-                .invoke(sb, what, SYSTEM_TOKEN, CALLER_TAG);
+                .invoke(sb, flags[0], SYSTEM_TOKEN, CALLER_TAG);
         // Flags may already be set even if disable2 fails below: make sure exit paths restore them.
         if (!enable) systemOff = true;
         String extra = "";
         try {
             sb.getClass().getMethod("disable2", int.class, IBinder.class, String.class)
-                    .invoke(sb, what2, SYSTEM_TOKEN, CALLER_TAG);
+                    .invoke(sb, flags[1], SYSTEM_TOKEN, CALLER_TAG);
         } catch (NoSuchMethodException e) {
             extra = " (no disable2)";
         }
@@ -768,6 +806,290 @@ public final class PanelServer {
     }
 
     private static final String CALLER_TAG = "io.github.akane599.umbra";
+
+    // ------------------------------------------------------------------ touch relay (touch lock)
+
+    private static final int INJECT_ASYNC = 0;
+    private static final int SOURCE_CLASS_POINTER = 0x2;
+    private static final int MAX_POINTERS = 16;
+    private static final int MAX_POINTER_ID = 31;
+    private static final int MAX_SAMPLES = 5000;
+    private static final long MAX_GESTURE_MS = 60_000;
+
+    /**
+     * An injected gesture the touch lock caught, to replay underneath it once it has opened a hole there (the app's
+     * TouchRelay). Replays run one at a time, in order, on their own thread so the command loop stays free.
+     */
+    static final class Gesture {
+        final int source;
+        final int[] actions;
+        /** Milliseconds after the first sample. */
+        final long[] times;
+        final int[] buttons;
+        final int[][] ids;
+        final int[][] tools;
+        /** x, y, pressure, size for each pointer. */
+        final float[][] coords;
+
+        private Gesture(int source, int n) {
+            this.source = source;
+            actions = new int[n];
+            times = new long[n];
+            buttons = new int[n];
+            ids = new int[n][];
+            tools = new int[n][];
+            coords = new float[n][];
+        }
+
+        /**
+         * "source sample sample…", a sample being "action,ms,buttons,pointer[,pointer…]" and a pointer
+         * "id:tool:x:y:pressure:size". Only takes a whole, consistent touch, DOWN to UP with every finger that goes
+         * down coming up: one left down would make the system refuse every injected touch after it, adb's included.
+         */
+        static Gesture parse(String arg) {
+            String[] tok = arg.trim().split(" +");
+            if (tok.length < 3) throw new IllegalArgumentException("expected a source and two samples or more");
+            int n = tok.length - 1;
+            if (n > MAX_SAMPLES) throw new IllegalArgumentException("too many samples");
+            Gesture g = new Gesture(Integer.parseInt(tok[0]), n);
+            if ((g.source & SOURCE_CLASS_POINTER) == 0) throw new IllegalArgumentException("not a pointer source");
+            for (int i = 0; i < n; i++) {
+                String[] f = tok[i + 1].split(",");
+                int pointers = f.length - 3;
+                if (pointers < 1 || pointers > MAX_POINTERS) {
+                    throw new IllegalArgumentException("sample " + i + ": bad pointer count");
+                }
+                g.actions[i] = Integer.parseInt(f[0]);
+                g.times[i] = Long.parseLong(f[1]);
+                g.buttons[i] = Integer.parseInt(f[2]);
+                if (g.times[i] < (i == 0 ? 0 : g.times[i - 1])) {
+                    throw new IllegalArgumentException("sample " + i + ": time goes back");
+                }
+                g.ids[i] = new int[pointers];
+                g.tools[i] = new int[pointers];
+                g.coords[i] = new float[pointers * 4];
+                for (int p = 0; p < pointers; p++) {
+                    String[] q = f[3 + p].split(":");
+                    if (q.length != 6) throw new IllegalArgumentException("sample " + i + ": bad pointer");
+                    g.ids[i][p] = Integer.parseInt(q[0]);
+                    g.tools[i][p] = Integer.parseInt(q[1]);
+                    for (int k = 0; k < 4; k++) {
+                        float v = Float.parseFloat(q[2 + k]);
+                        if (Float.isNaN(v) || Float.isInfinite(v)) {
+                            throw new IllegalArgumentException("sample " + i + ": bad number");
+                        }
+                        g.coords[i][p * 4 + k] = v;
+                    }
+                }
+            }
+            g.checkPointers();
+            if (g.times[n - 1] > MAX_GESTURE_MS) throw new IllegalArgumentException("too long");
+            return g;
+        }
+
+        /** Each sample lists exactly the fingers that are down, and each one goes down and comes up once. */
+        private void checkPointers() {
+            int n = actions.length;
+            int down = 0; // bit per pointer id
+            for (int i = 0; i < n; i++) {
+                int listed = 0;
+                for (int id : ids[i]) {
+                    if (id < 0 || id > MAX_POINTER_ID || (listed & (1 << id)) != 0) {
+                        throw new IllegalArgumentException("sample " + i + ": bad pointer id");
+                    }
+                    listed |= 1 << id;
+                }
+                int index = pointerIndex(actions[i]);
+                if (index >= ids[i].length) throw new IllegalArgumentException("sample " + i + ": bad pointer index");
+                int changed = 1 << ids[i][index];
+                boolean ok;
+                switch (actions[i] & MotionEvent.ACTION_MASK) {
+                    case MotionEvent.ACTION_DOWN:
+                        ok = i == 0 && actions[i] == MotionEvent.ACTION_DOWN && ids[i].length == 1;
+                        down = listed;
+                        break;
+                    case MotionEvent.ACTION_POINTER_DOWN:
+                        ok = i > 0 && (down & changed) == 0 && listed == (down | changed);
+                        down = listed;
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        ok = i > 0 && actions[i] == MotionEvent.ACTION_MOVE && listed == down;
+                        break;
+                    case MotionEvent.ACTION_POINTER_UP:
+                        ok = i > 0 && (down & changed) != 0 && listed == down;
+                        down &= ~changed;
+                        break;
+                    case MotionEvent.ACTION_UP:
+                        ok = i == n - 1 && i > 0 && actions[i] == MotionEvent.ACTION_UP && listed == down
+                                && ids[i].length == 1;
+                        down = 0;
+                        break;
+                    default:
+                        ok = false;
+                }
+                if (!ok) throw new IllegalArgumentException("sample " + i + ": not a consistent touch from DOWN to UP");
+            }
+            if ((actions[n - 1] & MotionEvent.ACTION_MASK) != MotionEvent.ACTION_UP) {
+                throw new IllegalArgumentException("must end with UP");
+            }
+        }
+
+        private static int pointerIndex(int action) {
+            return (action & MotionEvent.ACTION_POINTER_INDEX_MASK) >> MotionEvent.ACTION_POINTER_INDEX_SHIFT;
+        }
+
+        /** Which pointers of sample [i] (indices into it) are still down after it. */
+        int[] downAfter(int i) {
+            int n = ids[i].length;
+            switch (actions[i] & MotionEvent.ACTION_MASK) {
+                case MotionEvent.ACTION_UP:
+                    return new int[0];
+                case MotionEvent.ACTION_POINTER_UP: {
+                    int lifted = pointerIndex(actions[i]);
+                    int[] out = new int[n - 1];
+                    for (int p = 0, k = 0; p < n; p++) if (p != lifted) out[k++] = p;
+                    return out;
+                }
+                default: {
+                    int[] out = new int[n];
+                    for (int p = 0; p < n; p++) out[p] = p;
+                    return out;
+                }
+            }
+        }
+
+        MotionEvent event(int i, long downTime) {
+            int[] all = new int[ids[i].length];
+            for (int p = 0; p < all.length; p++) all[p] = p;
+            return obtain(i, all, actions[i], downTime, downTime + times[i]);
+        }
+
+        /** A CANCEL for the pointers still down after sample [i] ({@link #downAfter}). */
+        MotionEvent cancel(int i, long downTime, long now) {
+            return obtain(i, downAfter(i), MotionEvent.ACTION_CANCEL, downTime, Math.max(now, downTime + times[i]));
+        }
+
+        private MotionEvent obtain(int i, int[] which, int action, long downTime, long eventTime) {
+            int n = which.length;
+            MotionEvent.PointerProperties[] props = new MotionEvent.PointerProperties[n];
+            MotionEvent.PointerCoords[] pc = new MotionEvent.PointerCoords[n];
+            for (int k = 0; k < n; k++) {
+                int p = which[k];
+                props[k] = new MotionEvent.PointerProperties();
+                props[k].id = ids[i][p];
+                props[k].toolType = tools[i][p];
+                pc[k] = new MotionEvent.PointerCoords();
+                pc[k].x = coords[i][p * 4];
+                pc[k].y = coords[i][p * 4 + 1];
+                pc[k].pressure = coords[i][p * 4 + 2];
+                pc[k].size = coords[i][p * 4 + 3];
+            }
+            return MotionEvent.obtain(downTime, eventTime, action, n, props, pc, 0, buttons[i],
+                    1f, 1f, 0, 0, source, 0);
+        }
+    }
+
+    private static final ExecutorService INJECTOR = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "inject");
+        t.setDaemon(true);
+        return t;
+    });
+
+    private static final Object INJECT_LOCK = new Object();
+    /**
+     * The replay under way, so it can be cancelled: its gesture, when it went down, and the last of its samples the
+     * system took (-1: none yet). Guarded by INJECT_LOCK.
+     */
+    private static Gesture injecting;
+    private static long injectingDown;
+    private static int injectedIndex = -1;
+    /** Set once the process is exiting; no replay starts or continues after it. Guarded by INJECT_LOCK. */
+    private static boolean injectClosed;
+    private static Object inputManager;
+    private static Method injectMethod;
+
+    private static String inject(String arg) {
+        Gesture g = Gesture.parse(arg);
+        INJECTOR.execute(() -> replay(g));
+        return String.valueOf(g.actions.length);
+    }
+
+    private static void replay(Gesture g) {
+        long down = SystemClock.uptimeMillis();
+        int last = g.actions.length - 1;
+        for (int i = 0; i <= last; i++) {
+            long wait = down + g.times[i] - SystemClock.uptimeMillis();
+            if (wait > 0) SystemClock.sleep(wait);
+            synchronized (INJECT_LOCK) {
+                if (injectClosed) return;
+                if (i == 0) {
+                    injecting = g;
+                    injectingDown = down;
+                    injectedIndex = -1;
+                }
+                MotionEvent ev = g.event(i, down);
+                // Asynchronous: false then means the system refused the event outright (it checks the touch stream
+                // before queueing it), never that it reached no window. A refused DOWN usually means another tool's
+                // touch is down: sending the rest, or a cancel, could end that touch instead.
+                boolean ok = injectEvent(ev, INJECT_ASYNC);
+                ev.recycle();
+                if (ok) {
+                    injectedIndex = i;
+                } else {
+                    emit("log inject: the system refused sample " + i + (i == 0 ? "" : "; cancelling the touch"));
+                    cancelInjection();
+                    return;
+                }
+                if (i == last) {
+                    injecting = null;
+                    injectedIndex = -1;
+                }
+            }
+        }
+    }
+
+    /** Ends a replay cut short by the exit, so the system takes injected touches again. */
+    private static void endInjection() {
+        synchronized (INJECT_LOCK) {
+            injectClosed = true;
+            cancelInjection();
+        }
+    }
+
+    /**
+     * Ends the replay under way with a CANCEL for the fingers it has down: one left down would make the system refuse
+     * every injected touch after it, adb's included. Holds INJECT_LOCK.
+     */
+    private static void cancelInjection() {
+        Gesture g = injecting;
+        int i = injectedIndex;
+        injecting = null;
+        injectedIndex = -1;
+        // Nothing taken yet: no finger of this replay is down.
+        if (g == null || i < 0 || g.downAfter(i).length == 0) return;
+        MotionEvent ev = g.cancel(i, injectingDown, SystemClock.uptimeMillis());
+        if (!injectEvent(ev, INJECT_ASYNC)) emit("log inject: the system refused the cancel");
+        ev.recycle();
+    }
+
+    private static boolean injectEvent(MotionEvent ev, int mode) {
+        try {
+            if (injectMethod == null) {
+                Class<?> c;
+                try {
+                    c = Class.forName("android.hardware.input.InputManagerGlobal"); // Android 14+
+                } catch (ClassNotFoundException e) {
+                    c = Class.forName("android.hardware.input.InputManager");
+                }
+                inputManager = c.getMethod("getInstance").invoke(null);
+                injectMethod = c.getMethod("injectInputEvent", InputEvent.class, int.class);
+            }
+            return (Boolean) injectMethod.invoke(inputManager, ev, mode);
+        } catch (Throwable t) {
+            emit("log inject " + describe(t));
+            return false;
+        }
+    }
 
     // ------------------------------------------------------------------ helper commands
 

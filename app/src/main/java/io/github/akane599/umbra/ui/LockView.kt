@@ -26,6 +26,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import android.view.animation.DecelerateInterpolator
 import androidx.core.content.ContextCompat
 import io.github.akane599.umbra.R
+import io.github.akane599.umbra.TouchRelay
 import kotlin.math.hypot
 import kotlin.random.Random
 
@@ -42,6 +43,8 @@ class LockView(
     context: Context,
     private val dimAlpha: Float,
     private val persistentBadge: Boolean,
+    /** How much brighter to draw, making up for a window drawn see-through (LockOverlay): 1 / window alpha. */
+    private val gain: Float,
     private val onUnlock: () -> Unit,
 ) : View(context) {
 
@@ -290,9 +293,16 @@ class LockView(
     private val touchExploration: Boolean
         get() = context.getSystemService(AccessibilityManager::class.java)?.isTouchExplorationEnabled == true
 
+    /** Gets injected touches (adb, scrcpy…): not the user's finger, so they neither show the badge nor unlock. */
+    var onInjectedTouch: ((MotionEvent) -> Unit)? = null
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(e: MotionEvent): Boolean {
         if (unlocked) return true
+        if (TouchRelay.isInjected(e)) {
+            onInjectedTouch?.invoke(e)
+            return true
+        }
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 wake()
@@ -354,7 +364,7 @@ class LockView(
     override fun onDraw(canvas: Canvas) {
         val out = 1f - exit
         if (dimAlpha > 0f) {
-            scrimPaint.alpha = (255 * dimAlpha * enter * out).toInt()
+            scrimPaint.alpha = alpha(255, dimAlpha * enter * out)
             canvas.drawPaint(scrimPaint)
         }
         val a = badgeAlpha * out
@@ -365,24 +375,24 @@ class LockView(
         val scale = 0.86f + 0.14f * enter
 
         if (pulse >= 0f) {
-            pulsePaint.alpha = (110 * (1f - pulse) * out).toInt()
+            pulsePaint.alpha = alpha(110, (1f - pulse) * out)
             canvas.drawCircle(cx, cy, radius + pulse * 22 * dp, pulsePaint)
         }
 
         canvas.save()
         canvas.scale(scale, scale, cx, cy)
-        discPaint.alpha = (150 * a).toInt()
+        discPaint.alpha = alpha(150, a)
         canvas.drawCircle(cx, cy, radius, discPaint)
-        rimPaint.alpha = (46 * a).toInt()
+        rimPaint.alpha = alpha(46, a)
         canvas.drawCircle(cx, cy, radius - rimPaint.strokeWidth / 2, rimPaint)
         drawGlyph(canvas, cx, cy, a)
 
         if (hold > 0f || holding) {
             val r = radius + 6 * dp
             arc.set(cx - r, cy - r, cx + r, cy + r)
-            trackPaint.alpha = (56 * a).toInt()
+            trackPaint.alpha = alpha(56, a)
             canvas.drawCircle(cx, cy, r, trackPaint)
-            ringPaint.alpha = (255 * a).toInt()
+            ringPaint.alpha = alpha(255, a)
             canvas.drawArc(arc, -90f, 360f * hold, false, ringPaint)
         }
         canvas.restore()
@@ -396,13 +406,16 @@ class LockView(
             val th = fm.descent - fm.ascent
             val bottom = cy - radius - 18 * dp
             pill.set(cx - tw / 2 - padH, bottom - th - 2 * padV, cx + tw / 2 + padH, bottom)
-            pillPaint.alpha = (150 * ca).toInt()
+            pillPaint.alpha = alpha(150, ca)
             val pr = pill.height() / 2
             canvas.drawRoundRect(pill, pr, pr, pillPaint)
-            textPaint.alpha = (235 * ca).toInt()
+            textPaint.alpha = alpha(235, ca)
             canvas.drawText(caption, cx - tw / 2, pill.bottom - padV - fm.descent, textPaint)
         }
     }
+
+    /** [base] (0–255) faded by [f], made up for [gain]. What would need more than 255 (full white, a deep dim) stops there. */
+    private fun alpha(base: Int, f: Float) = (base * f * gain).toInt().coerceIn(0, 255)
 
     /** Padlock: rounded body with a keyhole and a shackle that lifts when open. */
     private fun drawGlyph(canvas: Canvas, cx: Float, cy: Float, a: Float) {
@@ -410,9 +423,9 @@ class LockView(
         val bh = 13 * dp
         val top = cy - bh / 2 + 3.5f * dp
         body.set(cx - bw / 2, top, cx + bw / 2, top + bh)
-        glyphFill.alpha = (255 * a).toInt()
+        glyphFill.alpha = alpha(255, a)
         canvas.drawRoundRect(body, 3.2f * dp, 3.2f * dp, glyphFill)
-        keyholePaint.alpha = (150 * a).toInt()
+        keyholePaint.alpha = alpha(150, a)
         canvas.drawCircle(cx, top + bh * 0.45f, 1.7f * dp, keyholePaint)
         canvas.drawRect(cx - 0.7f * dp, top + bh * 0.45f, cx + 0.7f * dp, top + bh * 0.72f, keyholePaint)
 
@@ -427,7 +440,7 @@ class LockView(
         arc.set(cx - sw / 2, archTop, cx + sw / 2, archTop + sw)
         shackle.arcTo(arc, 180f, 180f, false)
         shackle.lineTo(cx + sw / 2, legBottom - raise)
-        glyphStroke.alpha = (255 * a).toInt()
+        glyphStroke.alpha = alpha(255, a)
         canvas.drawPath(shackle, glyphStroke)
     }
 
