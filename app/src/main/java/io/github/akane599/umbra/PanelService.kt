@@ -54,6 +54,7 @@ class PanelService : Service() {
     @Volatile private var destroyed = false
     private var sessionStart = 0L
     private var wakeLock: PowerManager.WakeLock? = null
+    private lateinit var screenTimeout: ScreenTimeout
     private var shield: TouchShield? = null
     private var lock: LockOverlay? = null
     /** Set on the worker thread once the server has turned off the shade and navigation. */
@@ -105,6 +106,9 @@ class PanelService : Service() {
         workerThread.start()
         worker = Handler(workerThread.looper)
         lastOrientation = resources.configuration.orientation
+        screenTimeout = ScreenTimeout.of(this)
+        // A new instance has no session: a timeout left raised by one that died goes back now.
+        screenTimeout.release()
         createChannel()
     }
 
@@ -184,7 +188,8 @@ class PanelService : Service() {
         // Key monitor: needed for the volume combo, power key detection, and pausing the holder on power key presses.
         val wantKeys = settings.exitVolume || settings.exitPower || hold
         val needsSetup = !settings.setupDone ||
-            (settings.exitDoubleTap && !Settings.canDrawOverlays(this))
+            (settings.exitDoubleTap && !Settings.canDrawOverlays(this)) ||
+            (settings.keepAwake && !ScreenTimeout.canHold(this))
         val preDelay = when (source) {
             "tile" -> 350L          // while the notification shade collapses
             "app", "shortcut" -> 450L  // while the activity moves to the background
@@ -228,9 +233,28 @@ class PanelService : Service() {
 
     private fun activateAwake() {
         setState(State.ACTIVE)
-        acquireWakeLock(timeoutMs = null)
+        holdScreenOn(timeoutMs = null)
         registerScreenReceiver()
         updateNotification()
+        // Stay awake doesn't need the helper, but on Samsung the wake lock alone doesn't last: let the helper
+        // allow "Modify system settings" once, if there is one.
+        val privilege = settings.privilegeMode
+        if (!ScreenTimeout.canHold(this) && helperMayStart(privilege)) worker.post {
+            // No callbacks: this helper's exit must not look like a session's server dying.
+            runCatching { PrivilegedBridge(this).oneShot(privilege, "grant $packageName") }
+                .onSuccess { onGranted() }
+                .onFailure { Log.i(TAG, "stay awake without helper: ${it.message}") }
+        }
+    }
+
+    /** Whether starting the helper can work at all (Shizuku-only with Shizuku not ready can't). */
+    private fun helperMayStart(privilege: String) =
+        !(privilege == "shizuku" && PrivilegedBridge.shizukuState() != PrivilegedBridge.Companion.ShizukuState.READY)
+
+    /** Called on the worker thread after the helper's grant ran: a session already holding the screen can raise the timeout now. */
+    private fun onGranted() {
+        settings.setupDone = true
+        onMain { if (wakeLock?.isHeld == true) screenTimeout.hold() }
     }
 
     private fun activateLock(source: String) {
@@ -242,7 +266,8 @@ class PanelService : Service() {
         val overlayOk = Settings.canDrawOverlays(this)
         // The helper is optional for touch lock (it adds the volume combo and full lock), so skip it
         // when it can't possibly start rather than waiting on a doomed attempt.
-        val tryHelper = !(privilege == "shizuku" && PrivilegedBridge.shizukuState() != PrivilegedBridge.Companion.ShizukuState.READY)
+        val tryHelper = helperMayStart(privilege)
+        val canHold = ScreenTimeout.canHold(this)
         val delay = when (source) {
             "tile" -> 300L          // while the notification shade collapses
             "app", "shortcut" -> 450L  // while the activity moves to the background
@@ -273,8 +298,10 @@ class PanelService : Service() {
                 return@post
             }
             bridge = br
+            if (!overlayOk || !canHold) {
+                runCatching { br.request("grant $packageName") }.onSuccess { onGranted() }
+            }
             if (!overlayOk) {
-                runCatching { br.request("grant $packageName") }.onSuccess { settings.setupDone = true }
                 onMain {
                     if (state == State.STARTING) {
                         showLock = Runnable { onLockReady() }.also { main.postDelayed(it, delay) }
@@ -322,7 +349,7 @@ class PanelService : Service() {
         lock = overlay
         settings.clearError()
         setState(State.ACTIVE)
-        acquireWakeLock(timeoutMs = null)
+        holdScreenOn(timeoutMs = null)
         registerScreenReceiver()
         updateNotification()
         switchToPending()
@@ -351,7 +378,7 @@ class PanelService : Service() {
         sessionStart = SystemClock.elapsedRealtime()
         methodInfo = "${backend?.label ?: "?"} · ${info.substringBefore(' ')}"
 
-        if (settings.keepAwake) acquireWakeLock(timeoutMs = 12 * 60 * 60 * 1000L)
+        if (settings.keepAwake) holdScreenOn(timeoutMs = 12 * 60 * 60 * 1000L)
         registerScreenReceiver()
 
         val exits = mutableListOf<String>()
@@ -465,7 +492,7 @@ class PanelService : Service() {
         val privilege = settings.privilegeMode
         if (mode != Mode.PANEL) {
             // Nothing below needs these; don't hold full brightness while the worker catches up.
-            releaseWakeLock()
+            releaseScreenOn()
             unregisterScreenReceiver()
             worker.post {
                 val br = bridge
@@ -500,7 +527,7 @@ class PanelService : Service() {
     }
 
     private fun endSession() {
-        releaseWakeLock()
+        releaseScreenOn()
         unregisterScreenReceiver()
         setState(State.IDLE)
         val next = pending
@@ -596,10 +623,14 @@ class PanelService : Service() {
     /**
      * Keeps the system believing the screen is in use so it doesn't time out. [timeoutMs] null holds
      * it until the session ends (touch lock, stay awake): those end on the power key or a stop command.
+     *
+     * Two ways at once: a screen wake lock, and the system screen timeout raised to its maximum (see
+     * [ScreenTimeout]; Samsung stops honoring the wake lock when the normal timeout runs out). The timeout
+     * needs "Modify system settings"; without it the wake lock carries on alone.
      */
     @Suppress("DEPRECATION")
     @SuppressLint("WakelockTimeout")
-    private fun acquireWakeLock(timeoutMs: Long?) {
+    private fun holdScreenOn(timeoutMs: Long?) {
         if (wakeLock?.isHeld == true) return
         wakeLock = power.newWakeLock(
             PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ON_AFTER_RELEASE,
@@ -608,11 +639,18 @@ class PanelService : Service() {
             setReferenceCounted(false)
             if (timeoutMs != null) acquire(timeoutMs) else acquire()
         }
+        if (!screenTimeout.hold()) Log.i(TAG, "screen timeout not raised (no \"Modify system settings\"); wake lock only")
+        if (timeoutMs != null) main.postDelayed(screenHoldExpiry, timeoutMs)
     }
 
-    private fun releaseWakeLock() {
+    /** The wake lock runs out by itself after holdScreenOn's timeoutMs; the raised timeout has to be put back. */
+    private val screenHoldExpiry = Runnable { screenTimeout.release() }
+
+    private fun releaseScreenOn() {
         wakeLock?.let { if (it.isHeld) it.release() }
         wakeLock = null
+        main.removeCallbacks(screenHoldExpiry)
+        screenTimeout.release()
     }
 
     private fun registerScreenReceiver() {
@@ -652,7 +690,6 @@ class PanelService : Service() {
             shake?.stop()
             lock?.hideNow()
             lock = null
-            releaseWakeLock()
             unregisterScreenReceiver()
             // The server restores the system UI when it exits, so stop() covers touch lock.
             val panel = mode == Mode.PANEL
@@ -662,6 +699,8 @@ class PanelService : Service() {
         // Reset the shared state no matter where we ended up; if it stayed stuck in STOPPING,
         // later commands would be ignored. (The queued "on" task still runs thanks to quitSafely.)
         if (state != State.IDLE) setState(State.IDLE)
+        // Whatever state it was in (a panel session that is still stopping holds the screen too).
+        releaseScreenOn()
         workerThread.quitSafely()
         super.onDestroy()
     }

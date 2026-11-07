@@ -100,7 +100,7 @@
     <string name="pref_add_tile">Hızlı ayar kutucukları ekle</string>
     <string name="pref_add_tile_sum">Ekranı karart, dokunma kilidi ve uyanık tut; her biri tek dokunuşla</string>
     <string name="pref_grant">Gerekli izinleri ver</string>
-    <string name="pref_grant_sum">Bildirim, çizim (overlay) ve pil muafiyeti — Shizuku/root ile tek dokunuşta</string>
+    <string name="pref_grant_sum">Bildirim, çizim (overlay), pil muafiyeti ve sistem ayarları (ekran zaman aşımı) — Shizuku/root ile tek dokunuşta</string>
     <string name="pref_diag">Tanılama</string>
     <string name="pref_diag_sum">Hangi kapatma yollarının ve tuş aygıtlarının çalıştığını gösterir</string>
 
@@ -159,6 +159,7 @@
     <string name="mode_awake_title">Uyanık tut</string>
     <string name="mode_awake_sum_off">Sen durdurana ya da güç tuşuna basana kadar ekran kapanmaz</string>
     <string name="mode_awake_sum_on">Açık · ekran zaman aşımına uğramaz</string>
+    <string name="mode_awake_sum_needs_settings">Önce “Sistem ayarlarını değiştirme” izni gerekli · izin için dokun</string>
 
     <string name="cat_lock">Dokunma kilidi</string>
     <string name="pref_lock_dim">Ekranı loşlaştır</string>

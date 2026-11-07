@@ -113,6 +113,7 @@ class MainActivity : AppCompatActivity() {
         Shizuku.addBinderReceivedListenerSticky(binderListener)
         Shizuku.addBinderDeadListener(deadListener)
         PanelService.addListener(stateListener)
+        ScreenTimeout.recover(this)
         refresh()
     }
 
@@ -362,8 +363,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onAwakeClick() {
-        val action = if (PanelService.isActive(PanelService.Mode.AWAKE)) PanelService.ACTION_STOP else PanelService.ACTION_AWAKE
-        PanelService.command(applicationContext, action, "app")
+        when {
+            PanelService.isActive(PanelService.Mode.AWAKE) ->
+                PanelService.command(applicationContext, PanelService.ACTION_STOP, "app")
+            // Some phones (Samsung) ignore the wake lock once the normal timeout runs out; without a helper to
+            // grant "Modify system settings", its system page is the only way.
+            awakeNeedsSettings() -> openWriteSettings()
+            else -> PanelService.command(applicationContext, PanelService.ACTION_AWAKE, "app")
+        }
+    }
+
+    private fun awakeNeedsSettings() = !ScreenTimeout.canHold(this) && !helperLikely()
+
+    private fun openWriteSettings() {
+        runCatching {
+            startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName")))
+        }.onFailure { toast(getString(R.string.mode_awake_sum_needs_settings)) }
     }
 
     private fun helperLikely() =
@@ -501,9 +516,18 @@ class MainActivity : AppCompatActivity() {
             lockRow.summary.setTextColor(if (overlayOk) dim else warn)
 
             val awake = PanelService.isActive(PanelService.Mode.AWAKE)
+            val needsSettings = !awake && awakeNeedsSettings()
             awakeRow.toggle.isChecked = awake
-            awakeRow.summary.setText(if (awake) R.string.mode_awake_sum_on else R.string.mode_awake_sum_off)
-            awakeRow.summary.setTextColor(if (awake) accent else dim)
+            awakeRow.summary.setText(when {
+                awake -> R.string.mode_awake_sum_on
+                needsSettings -> R.string.mode_awake_sum_needs_settings
+                else -> R.string.mode_awake_sum_off
+            })
+            awakeRow.summary.setTextColor(when {
+                awake -> accent
+                needsSettings -> warn
+                else -> dim
+            })
             setRowActive(awakeRow, awake)
             ViewCompat.setStateDescription(awakeRow.root, awakeRow.summary.text)
         }

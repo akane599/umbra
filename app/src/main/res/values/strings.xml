@@ -101,7 +101,7 @@
     <string name="pref_add_tile">Add Quick Settings tiles</string>
     <string name="pref_add_tile_sum">Screen off, touch lock and stay awake, one tap each</string>
     <string name="pref_grant">Grant required permissions</string>
-    <string name="pref_grant_sum">Notifications, overlay and battery exemption, in one tap via Shizuku/root</string>
+    <string name="pref_grant_sum">Notifications, overlay, battery exemption and system settings (screen timeout), in one tap via Shizuku/root</string>
     <string name="pref_diag">Diagnostics</string>
     <string name="pref_diag_sum">Shows which power-off paths and key devices work</string>
 
@@ -160,6 +160,7 @@
     <string name="mode_awake_title">Stay awake</string>
     <string name="mode_awake_sum_off">No screen timeout until you stop it or press power</string>
     <string name="mode_awake_sum_on">On · the screen won\'t time out</string>
+    <string name="mode_awake_sum_needs_settings">Needs “Modify system settings” first · tap to allow</string>
 
     <string name="cat_lock">Touch lock</string>
     <string name="pref_lock_dim">Dim the screen</string>

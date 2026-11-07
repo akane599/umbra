@@ -62,6 +62,11 @@ class AppSettings(context: Context) {
         get() = sp.getBoolean(K_SETUP_DONE, false)
         set(v) = sp.edit { putBoolean(K_SETUP_DONE, v) }
 
+    /** The user's screen timeout while a session has raised it (see [ScreenTimeout]). Written synchronously. */
+    var savedScreenTimeout: Int?
+        get() = if (sp.contains(K_SAVED_TIMEOUT)) sp.getInt(K_SAVED_TIMEOUT, 0) else null
+        set(v) = sp.edit(commit = true) { if (v == null) remove(K_SAVED_TIMEOUT) else putInt(K_SAVED_TIMEOUT, v) }
+
     companion object {
         const val K_PRIVILEGE = "privilege_mode"
         const val K_METHOD = "power_method"
@@ -90,5 +95,6 @@ class AppSettings(context: Context) {
         private const val K_ERR_KIND = "last_error_kind"
         private const val K_ERR_RAW = "last_error_raw"
         private const val K_ERR_AT = "last_error_at"
+        private const val K_SAVED_TIMEOUT = "saved_screen_timeout"
     }
 }

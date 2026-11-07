@@ -783,6 +783,9 @@ public final class PanelServer {
         if (run("/system/bin/appops", "set", pkg, "SYSTEM_ALERT_WINDOW", "allow") == 0) ok++;
         total++;
         if (run("/system/bin/cmd", "deviceidle", "whitelist", "+" + pkg) == 0) ok++;
+        // "Modify system settings": lets the app raise the screen timeout during a session (ScreenTimeout).
+        total++;
+        if (run("/system/bin/appops", "set", pkg, "WRITE_SETTINGS", "allow") == 0) ok++;
         return ok + "/" + total;
     }
 

@@ -26,6 +26,7 @@ abstract class ModeTileService : TileService() {
     override fun onStartListening() {
         super.onStartListening()
         render(PanelService.isActive(mode))
+        ScreenTimeout.recover(this)
     }
 
     override fun onClick() {

@@ -74,10 +74,19 @@ uyanışta sistem paneli kendisi açar.
 Sen kapatana (uygulama, **Uyanık tut** QS kutucuğu, bildirim) ya da güç tuşuna basana kadar ekranı açık
 tutar. Başka hiçbir şey değişmez: dokunma, parlaklık ve uygulamalar her zamanki gibi davranır.
 
+Ekran wake lock'u tutar, ayrıca sistemin ekran zaman aşımını en yükseğe çıkarır ve bitince senin
+ayarını geri koyar. Zaman aşımı Samsung'da önemli: normal süre dolunca One UI, ekranda hiçbir şeyi
+olmayan bir uygulamanın wake lock'unu dikkate almayı bırakır, ekranı karartır ve kapatır. Zaman aşımını
+değiştirmek **Sistem ayarlarını değiştirme** izni ister; Shizuku/root varsa otomatik verilir, yoksa
+uygulama ilk seferde o sayfayı açar. Ekranı kapatma ("Cihazı uyanık tut") ve dokunma kilidi de ekranı
+aynı yolla açık tutar. Oturum yarıda kesilirse (çökme, zorla durdurma, yeniden başlatma) zaman aşımın,
+Umbra bir sonraki açılışında ya da hızlı ayarlar açıldığında geri konur.
+
 ## Davranış ayarları
 
 - **Cihazı uyanık tut** (varsayılan açık): Oturum boyunca (en fazla 12 saat) ekran zaman aşımı uygulanmaz;
-  bu yüzden panel kapalıyken telefon kendiliğinden kilitlenmez. Kapatırsan telefon normal zaman aşımında
+  bu yüzden panel kapalıyken telefon kendiliğinden kilitlenmez. Ekran zaman aşımı ayarı oturum boyunca
+  yükseltilir, sonra geri konur (bkz. Uyanık tut). Kapatırsan telefon normal zaman aşımında
   uyur ve kilitlenir (oturum da biter).
 - **Ekran geri gelince kilitle** (varsayılan açık): Telefonda PIN, desen ya da şifre varsa çift dokunma, ses
   tuşları, sallama ve zamanlayıcı telefonu kilitsiz açmak yerine güç tuşu gibi uyutup doğrudan kilit
@@ -88,8 +97,8 @@ tutar. Başka hiçbir şey değişmez: dokunma, parlaklık ve uygulamalar her za
 - **Yetki kaynağı:** Otomatik (Shizuku → root), yalnız Shizuku, yalnız root.
 - **Kapatma yöntemi:** Otomatik / SurfaceControl / DisplayManager.
 
-İlk etkinleştirmede bildirim izni, çizim (overlay) izni ve pil optimizasyonu muafiyeti Shizuku/root ile
-otomatik verilir (`pm grant`, `appops set`, `cmd deviceidle whitelist`). Muafiyet, Tasker yayınlarıyla
+İlk etkinleştirmede bildirim izni, çizim (overlay) izni, **Sistem ayarlarını değiştirme** izni ve pil
+optimizasyonu muafiyeti Shizuku/root ile otomatik verilir (`pm grant`, `appops set`, `cmd deviceidle whitelist`). Muafiyet, Tasker yayınlarıyla
 arka plandan ön plan servisi başlatabilmek için gerekir.
 
 ## Tasker

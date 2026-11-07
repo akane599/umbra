@@ -80,13 +80,22 @@ failed.
 
 ## Stay awake
 
-Holds a screen wake lock until you switch it off (app, **Stay awake** QS tile, notification) or press
+Keeps the screen on until you switch it off (app, **Stay awake** QS tile, notification) or press
 power. Nothing else changes: touch, brightness and apps behave as usual.
+
+It holds a screen wake lock and also raises the system screen timeout to its maximum, then puts your
+own timeout back when it ends. The timeout matters on Samsung: once the normal timeout runs out, One UI
+stops honoring a wake lock from an app with nothing on screen, dims, and turns the screen off. Raising
+it needs **Modify system settings**, which is granted automatically with Shizuku/root; without them
+the app opens that page the first time. Screen off ("Keep the phone awake") and touch lock hold the
+screen the same way. If a session is cut short (crash, force stop, reboot), your timeout is put back
+the next time Umbra starts or Quick Settings opens.
 
 ## Behavior
 
 - **Keep the phone awake** (default on): no screen timeout during a session (up to 12 h), so the
-  phone doesn't lock by itself while the panel is off. Turn this off to let it sleep and lock on its
+  phone doesn't lock by itself while the panel is off. The screen timeout setting is raised for the
+  session and put back afterwards (see Stay awake). Turn this off to let it sleep and lock on its
   normal timeout (which also ends the session).
 - **Lock when the screen comes back** (default on): if the phone has a PIN, pattern or password,
   double tap, the volume keys, shake and the timer put it to sleep and wake it straight to the lock
@@ -98,9 +107,9 @@ power. Nothing else changes: touch, brightness and apps behave as usual.
 - **Privilege source** (Advanced): automatic (Shizuku → root), Shizuku only, root only.
 - **Power-off method** (Advanced): automatic / SurfaceControl / DisplayManager.
 
-On first activation, notification permission, the overlay permission and the battery optimization
-exemption are granted automatically through Shizuku/root (`pm grant`, `appops set`,
-`cmd deviceidle whitelist`). The exemption is needed so Tasker broadcasts can start the foreground
+On first activation, notification permission, the overlay permission, **Modify system settings** and
+the battery optimization exemption are granted automatically through Shizuku/root (`pm grant`,
+`appops set`, `cmd deviceidle whitelist`). The exemption is needed so Tasker broadcasts can start the foreground
 service from the background.
 
 ## Tasker
